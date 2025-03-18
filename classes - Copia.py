@@ -101,13 +101,21 @@ class Overburden:
 
         wellDF = pd.concat([wellDF, self.gradDF], axis=1)
         wellDF.to_excel(f'output\\{name}.xlsx')
-        return wellDF, wellinfoDF, self.tensionDF,  self.gradDF
 
     def plot(self, wellDF):
 
         # Cleaning zero values for Tension and overburden #
         self.tensionDF['Tension'] = self.tensionDF['Tension'].loc[(self.tensionDF['Tension'] != 0)]
         self.gradDF['Overburden'] = self.tensionDF['Tension'].loc[(self.tensionDF['Tension'] != 0)]
+
+        #for i in range(len(self.tensionDF.index)):
+        #    if self.tensionDF['Tension'][i] == 0:
+        #        self.tensionDF['Tension'][i] = self.tensionDF['Tension'].isin([i])
+        #        wellDF['prof (m)'] = wellDF['prof (m)'].isin([i])
+        #    if self.gradDF['Overburden'][i] == 0:
+        #       self.gradDF['Overburden'][i] = self.gradDF['Overburden'].isin([i])
+        #       wellDF['prof (m)'] = wellDF['prof (m)'].isin([i])
+
 
         plt.plot(self.tensionDF, wellDF['prof (m)'], color='red')
         plt.xlabel('Tensão [$psi$]')
@@ -119,42 +127,6 @@ class Overburden:
 
         plt.plot(self.gradDF, self.totalprofDF, color='purple')
         plt.axline((0, self.totalprofDF.max()),(10, self.totalprofDF.max()), color='black', ls=':',
-                   label=f'Profun máx = {self.totalprofDF.max()} $m$')
-        plt.axline((0, self.water_depth), (10, self.water_depth), color='blue', ls=':',
-                   label=f'Lâmi dágua = {self.water_depth} $m$')
-        plt.xlabel('Gradiente de sobrecarga [$lb/gal$]')
-        plt.ylabel('Profundidade [$m$]')
-        plt.ylim([0, self.totalprofDF.max()])
-        plt.title('Gradiente de sobrecarga $versus$ Profundidade')
-        plt.legend(loc='best')
-        plt.gca().invert_yaxis()
-        plt.grid()
-        plt.show()
-
-class multiplot:
-    def __init__(self, wellDF1, tensionDF, gradDF, wellDF2, tensionDF2, gradDF2):
-        self.wellDF1 = wellDF1
-        self.tensionDF = tensionDF
-        self.gradDF = gradDF
-        self.wellDF2 = wellDF2
-        self.tensionDF = tensionDF2
-        self.gradDF = gradDF2
-        self.plot()
-
-
-    def plot(self,):
-        plt.plot(self.tensionDF, self.wellDF['prof (m)'], color='red', label='Well 1')
-        plt.xlabel('Tensão [$psi$]')
-        plt.ylabel('Profundidade [$m$]')
-        plt.title('Pressão da sobrecarga $versus$ profundidade')
-        plt.grid()
-        plt.legend()
-        if self.wellDF['prof (m)'].max():
-            plt.ylim([0, self.wellDF['prof (m)'].max()])
-        plt.show()
-
-        plt.plot(self.gradDF, self.totalprofDF, color='purple')
-        plt.axline((0, self.totalprofDF.max()), (10, self.totalprofDF.max()), color='black', ls=':',
                    label=f'Profun máx = {self.totalprofDF.max()} $m$')
         plt.axline((0, self.water_depth), (10, self.water_depth), color='blue', ls=':',
                    label=f'Lâmi dágua = {self.water_depth} $m$')
