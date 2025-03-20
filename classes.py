@@ -27,6 +27,15 @@ def GaussIngenua(A, b):
     return x
 
 class exponentialmodel:
+        """
+        Receive the wellDF dataframe, find a linear regression of the exponential data, plot it and export the found
+        coefficients
+
+        Parameters
+        ----------
+        wellDF : dict or Any
+            Dataframe containing well information
+        """
         def __init__(self, wellDF):
             self.wellDF = wellDF
             self.fit()
@@ -88,6 +97,3 @@ class exponentialmodel:
 
         def export(self):
             return np.array([float(self.Data['Coeficiente linear']), float(self.Data['Coeficiente angular'])])
-
-
-

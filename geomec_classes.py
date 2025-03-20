@@ -10,6 +10,24 @@ from pandas.core.methods.selectn import SelectNSeries
 
 
 class Overburden:
+    """
+    Calculate the tension and the overburden, then plot graphics and export the found values in a .xlsx file
+
+    Parameters
+    ----------
+    wellDF : dict or Any
+        Dataframe containing well information
+    wellinfoDF : dict or Any
+        Dataframe containing environment information
+    name : str
+        Parameter name (used for exporting .xlsx)
+    water : int
+        Insert the water layer (currently only supports first layer [surface])
+    unknownregion : int
+        Insert the unknownregion layer
+    sumwater : bool
+            Make the class sum the water depth in the total depth dataframe
+    """
     def __init__(self, wellDF, wellinfoDF, name, water=None, unknownregion=None, sumwater=None):
         self.wellDF = wellDF
         self.wellinfoDF = wellinfoDF
@@ -142,6 +160,22 @@ class Overburden:
         plt.show()
 
 class multiplot:
+    """
+    Use all the dataframes returned by Overburden class or Bourgoyne and plot two wells in the same graphics
+
+    Parameters
+    ----------
+    wellDF : dict or Any
+    tensionDF : dict or Any
+    gradDF  : dict or Any
+    totalprofDF  : dict or Any
+    water_depth : dict or Any
+    wellDF2 : dict or Any
+    tensionDF2 : dict or Any
+    gradDF2 : dict or Any
+    totalprofDF2 : dict or Any
+    water_depth2 : dict or Any
+    """
     def __init__(self, wellDF, tensionDF, gradDF, totalprofDF, water_depth, wellDF2, tensionDF2, gradDF2, totalprofDF2, water_depth2):
         self.wellDF = wellDF
         self.tensionDF = tensionDF
@@ -199,6 +233,19 @@ class multiplot:
         plt.show()
 
 class Gardnercorrelation:
+        """
+            Using transit time (μs/ft), calculates the density (g/cm3) using Gardner method and returns it in a new wellDF dataframe to be
+            used in Overburden class
+            Equation defined as 'a*(10**6/Δt)**b'
+            Parameters
+            ----------
+            wellDF : dict or Any
+                Dataframe containing well information
+            wellinfoDF : dict or Any
+                Dataframe containing environment information
+            a : float
+            b : float
+        """
         def __init__(self, wellDF, wellinfoDF, a, b):
             self.wellDF, self.wellinfoDF, self.a, self.b = wellDF, wellinfoDF, a, b
             self.calculate()
@@ -213,6 +260,20 @@ class Gardnercorrelation:
                 return self.wellDF
             
 class Bellotti:
+        """
+            Using transit time (μs/ft), calculates the density (g/cm3) using Bellotti method and returns it in a new wellDF dataframe to be
+            used in Overburden class
+            Parameters
+            ----------
+            wellDF : dict or Any
+                Dataframe containing well information
+            wellinfoDF : dict or Any
+                Dataframe containing environment information
+            dtmatrix : float
+                Transit time of matrix
+            force_condition : str
+                Force a condition in the class, where it can be 'consolidated' or 'unconsolidated'
+            """
         def __init__(self, wellDF, wellinfoDF, dtmatrix=None, force_condition=None):
             self.wellDF, self.wellinfoDF, self.dtmatrix = wellDF, wellinfoDF, dtmatrix
             self.force_condition = force_condition
@@ -240,6 +301,28 @@ class Bellotti:
             return self.wellDF
 
 class Bourgoyne:
+    """
+    Calculate the density (g/cm3) using a linear regression of the exponential data.
+    Then, plot the graphic of porosity versus depth
+    and calculate the tension and the overburden values using Bourgoyne method.
+    Finally, export all the found values in a .xlsx file
+    DOES NOT SUPPORT UNKNOWNREGION
+    Parameters
+    ----------
+    wellDF : dict
+        Dataframe containing well information
+    wellinfoDF : dict
+        Dataframe containing environment information
+    name : str
+        Parameter name (used for exporting .xlsx)
+    water : int
+        Insert the water layer (currently only supports first layer [surface])
+    sumwater : bool
+        Make the class sum the water depth in the total depth
+    points : int
+        As Bourgoyne method returns a continuous function, tells how many points does the function will use to perform
+        calculations
+    """
     def __init__(self, wellDF, wellinfoDF, name, water=None, sumwater = None, points=None):
             self.wellDF, self.wellinfoDF = wellDF, wellinfoDF
             self.rho_seawater = None
@@ -332,6 +415,8 @@ class Bourgoyne:
         self.wellDF = pd.concat([self.wellDF, self.tensionDF], axis=1)
         self.wellDF = pd.concat([self.wellDF, self.gradDF], axis=1)
         self.wellDF.to_excel(f'output\\{self.name}.xlsx')
+
+        return self.wellDF, self.wellinfoDF, self.tensionDF, self.gradDF, self.totalprofDF, self.water_depth
         
     def plot(self):
     
