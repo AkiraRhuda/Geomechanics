@@ -4,6 +4,7 @@ from typing import Concatenate
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import classes
 from pandas import read_excel
 from pandas.core.methods.selectn import SelectNSeries
 
@@ -239,21 +240,126 @@ class Bellotti:
             return self.wellDF
 
 class Bourgoyne:
-    def __init__(self, wellDF, wellinfoDF):
+    def __init__(self, wellDF, wellinfoDF, name, water=None, sumwater = None, points=None):
             self.wellDF, self.wellinfoDF = wellDF, wellinfoDF
             self.rho_seawater = None
             self.rho_region = None
-            self.start()
+            self.name = name
+            self.water = water
+            self.sumwater = sumwater
+            self.tensionDF = None
+            self.gradDF = None
+            self.D = None
+            self.points = points
+            self.plotporosprof()
+            self.constants()
+            self.plotdensiprof()
+            self.density()
+            self.calculate()
+            self.plot()
             
-    def start(self):
-        # Extracting constants #
-        self.rho_seawater = self.wellinfoDF[1][0]
-        self.rho_region = self.wellinfoDF[1][1]
-        
-        plt.plot(self.wellDF['prof (m)'], self.wellDF['Porosidade'], color='red')
-        plt.xlabel('Porosidade')
-        plt.ylabel('Profundidade [$m$]')
+            
+    def plotporosprof(self):        
+        plt.plot(self.wellDF['prof (m)'], self.wellDF['Porosidade'], color='red', marker = 'o', ls = '--')
+        plt.ylabel('Porosidade')
+        plt.xlabel('Profundidade [$m$]')
         plt.title('Porosidade versus profundidade')
         plt.grid()
-        #plt.ylim([0, self.wellDF['prof (m)'].max()])
+        plt.savefig(f'output\\{self.name} - Porosidade versus profundidade.jpg', format='jpg', dpi=800)
+        plt.show()
+        
+    def constants(self):
+        self.phi0, self.K0 = classes.exponentialmodel(self.wellDF).export()
+        self.K0 = self.K0 * (-1)
+        self.phi0 = np.e**self.phi0
+        self.rho_seawater = self.wellinfoDF[1][0]
+        self.rho_region = self.wellinfoDF[1][1]
+        self.water_depth = self.wellinfoDF[1][2]
+        if self.points is None:
+            self.points = 100
+        else:
+            pass
+        
+        
+    def density(self):
+        return self.rho_region * (1 - self.phi0 * np.e ** (-self.K0*self.D)) + self.rho_seawater * self.phi0 * np.e ** (-self.K0*self.D)
+    
+
+    def tension(self):
+        return 1.422 * (self.rho_seawater*self.water_depth + self.rho_region*self.D - ((self.rho_region-self.rho_seawater)/self.K0)*self.phi0*(1-np.e**(-self.K0*self.D)))
+
+    @staticmethod
+    def grad(tensi, depth):
+        return tensi / (0.1704 * (depth))
+        
+    def plotdensiprof(self):
+        self.D = np.linspace(self.wellDF['prof (m)'].min(), self.wellDF['prof (m)'].max(), self.points)
+        plt.plot(self.density(), self.D, color='green')
+        plt.grid()
+        plt.title('Densidade versus profundidade')
+        plt.xlabel('Densidade')
+        plt.ylabel('Profundidade [$m$]')
+        plt.legend(loc='best')
+        plt.gca().invert_yaxis()
+        plt.savefig(f'output\\{self.name} - Densidade versus profundidade.jpg', format='jpg', dpi=800)
+        plt.show()
+        
+    def calculate(self):
+        self.wellDF['Porosidade'] = self.wellDF['Porosidade'] .fillna(0)
+        self.tensionDF = pd.DataFrame(np.zeros(len(self.D)))
+        self.gradDF = pd.DataFrame(np.zeros(len(self.D)))
+        self.totalprofDF = pd.DataFrame(np.zeros(len(self.D)))
+        
+        if self.sumwater == True:
+            self.totalprofDF[0] = self.D + self.water_depth
+        else:
+            self.totalprofDF = self.D
+        
+        if self.water is not None:
+            self.tensionDF[0] = self.tension()
+            for i in range(len(self.tensionDF.index)):
+                self.gradDF[0][i] = self.grad(self.tensionDF[0][i], self.totalprofDF[0][i])
+                    
+        else:
+            Exception(f"Code doesn't get up there, wait updates...")
+        self.totalprofDF.columns = ['new prof (m)']
+        self.wellDF = pd.concat([self.wellDF, self.totalprofDF], axis=1)
+        self.density = pd.DataFrame(self.density())
+        self.density.columns = ['Density']
+        self.wellDF = pd.concat([self.wellDF, self.density], axis=1)
+        self.tensionDF.columns = ['Tension']
+        self.gradDF.columns = ['Overburden']
+        self.wellDF = pd.concat([self.wellDF, self.tensionDF], axis=1)
+        self.wellDF = pd.concat([self.wellDF, self.gradDF], axis=1)
+        self.wellDF.to_excel(f'output\\{self.name}.xlsx')
+        
+    def plot(self):
+    
+        # Cleaning zero values for Tension and overburden #
+        self.tensionDF['Tension'] = self.tensionDF['Tension'].loc[(self.tensionDF['Tension'] != 0)]
+        self.gradDF['Overburden'] = self.gradDF['Overburden'].loc[(self.gradDF['Overburden'] != 0)]
+
+        plt.plot(self.tensionDF, self.totalprofDF, color='C12', marker='o', ls='--')
+        plt.xlabel('Tensão [$psi$]')
+        plt.ylabel('Profundidade [$m$]')
+        plt.title('Pressão da sobrecarga $versus$ profundidade')
+        plt.grid()
+        plt.ylim([0, self.totalprofDF['new prof (m)'].max()])
+        plt.gca().invert_yaxis()
+        plt.savefig(f'output\\{self.name} - Pressão sobrecarga.jpg', format='jpg', dpi=800)
+        plt.show()
+
+        plt.plot(self.gradDF, self.totalprofDF, color='purple', marker='o', ls='--')
+        plt.axline((0, self.totalprofDF['new prof (m)'].max()),(10, self.totalprofDF['new prof (m)'].max()), color='black', ls=':',
+                   label=f'Profun máx = {float(self.totalprofDF.max())} $m$')
+        plt.axline((0, self.water_depth), (10, self.water_depth), color='blue', ls=':',
+                   label=f'Lâmi dágua = {self.water_depth} $m$')
+        plt.xlabel('Gradiente de sobrecarga [$lb/gal$]')
+        plt.ylabel('Profundidade [$m$]')
+        plt.ylim([0, self.totalprofDF['new prof (m)'].max()])
+        plt.title('Gradiente de sobrecarga $versus$ Profundidade')
+        plt.legend(loc='best')
+        plt.gca().invert_yaxis()
+        plt.grid()
+        plt.savefig(f'output\\{self.name} - Gradiente de sobrecarga.jpg', format='jpg', dpi=800)
         plt.show()

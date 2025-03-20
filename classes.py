@@ -27,16 +27,17 @@ def GaussIngenua(A, b):
     return x
 
 class exponentialmodel:
-        def __init__(self, x, y):
-            self.x = x
-            self.y = y
+        def __init__(self, wellDF):
+            self.wellDF = wellDF
             self.fit()
             self.statistics()
             self.plot()
             self.export()
 
         def fit(self):
-            #self.x = self.x.loc[(self.x!= 0)]
+            self.wellDF = self.wellDF.fillna(0)
+            self.wellDF = self.wellDF.drop(0)
+            self.x, self.y = self.wellDF['prof (m)'], self.wellDF['Porosidade']
             self.lny = np.log(self.y)
             sum_xi = sum(self.x)
             sum_xi2 = sum(self.x ** 2)
@@ -74,12 +75,12 @@ class exponentialmodel:
 
             xt = np.linspace(min(self.x), max(self.x), 30)
             plt.scatter(self.x, np.log(self.y))
-            plt.title('Grafico do modelo exponencial')
-            plt.plot(xt, self.f(xt, self.Data), color='green', label=f'Reta: ln(y) = {float(self.Data['Coeficiente angular']):.4f}x + {float(self.Data['Coeficiente linear']):.4f}')
+            plt.title('Ln(porosidade) versus profundidade')
+            plt.plot(xt, self.f(xt, self.Data), color='green', label=f"Reta: ln(y) = {float(self.Data['Coeficiente angular']):.4f}x + {float(self.Data['Coeficiente linear']):.4f}")
             plt.plot([], [], ' ', label=f"Coeficiente de correlacao: {self.R2:.4f}")
             plt.plot([], [], ' ', label=f"Erro padrao de estimativa: {self.Syx:.4f}")
-            plt.ylabel('$ln(y)$')
-            plt.xlabel('$x$')
+            plt.ylabel('$ln(Porosidade)$')
+            plt.xlabel('Profundidade [$m$]')
             plt.legend(loc='best')
             plt.grid()
             plt.savefig(f'output\\Exponential Model.jpg', format='jpg', dpi=800)
