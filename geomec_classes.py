@@ -126,6 +126,7 @@ class Overburden:
 
         wellDF = pd.concat([self.wellDF, self.gradDF], axis=1)
         wellDF.to_excel(f'output\\{self.name}.xlsx')
+        self.wellDF = wellDF
         return self.wellDF, self.wellinfoDF, self.tensionDF,  self.gradDF, self.totalprofDF, self.water_depth
 
     def plot(self):
@@ -145,9 +146,9 @@ class Overburden:
         plt.show()
 
         plt.plot(self.gradDF, self.totalprofDF, color='purple', marker='o', ls='--')
-        plt.axline((0, self.totalprofDF.max()),(10, self.totalprofDF.max()), color='black', ls=':',
+        plt.axline((0, self.totalprofDF.max()),(1, self.totalprofDF.max()), color='black', ls=':',
                    label=f'Profun máx = {self.totalprofDF.max()} $m$')
-        plt.axline((0, self.water_depth), (10, self.water_depth), color='blue', ls=':',
+        plt.axline((0, self.water_depth), (1, self.water_depth), color='blue', ls=':',
                    label=f'Lâmi dágua = {self.water_depth} $m$')
         plt.xlabel('Gradiente de sobrecarga [$lb/gal$]')
         plt.ylabel('Profundidade [$m$]')
@@ -157,6 +158,21 @@ class Overburden:
         plt.gca().invert_yaxis()
         plt.grid()
         plt.savefig(f'output\\{self.name} - Gradiente de sobrecarga.jpg', format='jpg', dpi=800)
+        plt.show()
+        
+        plt.plot(self.wellDF['ρ (g/cm3)'], self.totalprofDF, color='orange', marker='o', ls='--')
+        plt.axline((0, self.totalprofDF.max()),(1, self.totalprofDF.max()), color='black', ls=':',
+                   label=f'Profun máx = {self.totalprofDF.max()} $m$')
+        plt.axline((0, self.water_depth), (1, self.water_depth), color='blue', ls=':',
+                   label=f'Lâmi dágua = {self.water_depth} $m$')
+        plt.xlabel('Densidade [$(g/cm3)$]')
+        plt.ylabel('Profundidade [$m$]')
+        plt.ylim([0, self.totalprofDF.max()])
+        plt.title('Densidade $versus$ Profundidade')
+        plt.legend(loc='best')
+        plt.gca().invert_yaxis()
+        plt.grid()
+        plt.savefig(f'output\\{self.name} - Densidade.jpg', format='jpg', dpi=800)
         plt.show()
 
 class multiplot:

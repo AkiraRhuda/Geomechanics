@@ -97,3 +97,152 @@ class exponentialmodel:
 
         def export(self):
             return np.array([float(self.Data['Coeficiente linear']), float(self.Data['Coeficiente angular'])])
+        
+        
+class linearregression:
+        """
+        Receive the wellDF dataframe, find a linear regression, plot it and export the found
+        coefficients
+
+        Parameters
+        ----------
+        wellDF : dict or Any
+            Dataframe containing well information
+        """
+        def __init__(self, wellDF):
+            self.wellDF = wellDF
+            self.fit()
+            self.statistics()
+            self.plot()
+            self.export()
+
+        def fit(self):
+            self.wellDF = self.wellDF.fillna(0)
+            self.wellDF = self.wellDF.drop(0)
+            self.x, self.y = self.wellDF['prof (m)'], self.wellDF['Porosidade']
+            self.lny = np.log(self.y)
+            sum_xi = sum(self.x)
+            sum_xi2 = sum(self.x ** 2)
+            sum_xilnyi = sum(self.x * self.lny)
+            sum_lnyi = sum(self.lny)
+
+            n = len(self.x)
+            matriz_coef = np.array([[n, sum_xi], [sum_xi, sum_xi2]])
+
+            A = matriz_coef
+
+            matriz_resp = np.array([[sum_lnyi], [sum_xilnyi]])
+
+            b = matriz_resp
+
+            a = GaussIngenua(A, b)
+            self.Data = pd.DataFrame()
+            self.Data['Coeficiente angular'] = [a[1]]
+            self.Data['Coeficiente linear'] = [a[0]]
+
+        @staticmethod
+        def f(x, a):
+            return float(a['Coeficiente linear']) + float(a['Coeficiente angular']) * x
+
+        def statistics(self):
+
+            # Estatisticas
+            ymean = sum(self.lny)/len(self.lny)
+            St = sum((self.lny-ymean)**2)
+            Sr = sum((float(self.Data['Coeficiente linear'])-float(self.Data['Coeficiente angular'])*self.x)**2)
+            self.R2 = (St - Sr)/St # Coeficiente de correlacao
+            self.Syx = (Sr/(len(self.lny)-2))**(1/2) # Erro padrao de estimativa
+
+        def plot(self):
+
+            xt = np.linspace(min(self.x), max(self.x), 30)
+            plt.scatter(self.x, np.log(self.y))
+            plt.title('Ln(porosidade) versus profundidade')
+            plt.plot(xt, self.f(xt, self.Data), color='green', label=f"Reta: ln(y) = {float(self.Data['Coeficiente angular']):.4f}x + {float(self.Data['Coeficiente linear']):.4f}")
+            plt.plot([], [], ' ', label=f"Coeficiente de correlacao: {self.R2:.4f}")
+            plt.plot([], [], ' ', label=f"Erro padrao de estimativa: {self.Syx:.4f}")
+            plt.ylabel('$ln(Porosidade)$')
+            plt.xlabel('Profundidade [$m$]')
+            plt.legend(loc='best')
+            plt.grid()
+            plt.savefig(f'output\\Exponential Model.jpg', format='jpg', dpi=800)
+            plt.show()
+
+        def export(self):
+            return np.array([float(self.Data['Coeficiente linear']), float(self.Data['Coeficiente angular'])])
+        
+class genericexponentialmodel:
+        """
+        Receive the wellDF dataframe, find a linear regression of the exponential data, plot it and export the found
+        coefficients
+
+        Parameters
+        ----------
+        wellDF : dict or Any
+            Dataframe containing well information
+        xname : str
+        yname : str
+        """
+        def __init__(self, wellDF, xname, yname):
+            self.wellDF = wellDF
+            self.xname = xname
+            self.yname = yname
+            self.fit()
+            self.statistics()
+            self.plot()
+            self.export()
+
+        def fit(self):
+            self.wellDF = self.wellDF.fillna(0)
+            self.wellDF = self.wellDF.drop(0)
+            self.x, self.y = self.wellDF[self.xname], self.wellDF[self.yname]
+            self.lny = np.log(self.y)
+            sum_xi = sum(self.x)
+            sum_xi2 = sum(self.x ** 2)
+            sum_xilnyi = sum(self.x * self.lny)
+            sum_lnyi = sum(self.lny)
+
+            n = len(self.x)
+            matriz_coef = np.array([[n, sum_xi], [sum_xi, sum_xi2]])
+
+            A = matriz_coef
+
+            matriz_resp = np.array([[sum_lnyi], [sum_xilnyi]])
+
+            b = matriz_resp
+
+            a = GaussIngenua(A, b)
+            self.Data = pd.DataFrame()
+            self.Data['Coeficiente angular'] = [a[1]]
+            self.Data['Coeficiente linear'] = [a[0]]
+
+        @staticmethod
+        def f(x, a):
+            return float(a['Coeficiente linear']) + float(a['Coeficiente angular']) * x
+
+        def statistics(self):
+
+            # Estatisticas
+            ymean = sum(self.lny)/len(self.lny)
+            St = sum((self.lny-ymean)**2)
+            Sr = sum((float(self.Data['Coeficiente linear'])-float(self.Data['Coeficiente angular'])*self.x)**2)
+            self.R2 = (St - Sr)/St # Coeficiente de correlacao
+            self.Syx = (Sr/(len(self.lny)-2))**(1/2) # Erro padrao de estimativa
+
+        def plot(self):
+
+            xt = np.linspace(min(self.x), max(self.x), 30)
+            plt.scatter(self.x, np.log(self.y))
+            plt.title('Title')
+            plt.plot(xt, self.f(xt, self.Data), color='green', label=f"Reta: ln(y) = {float(self.Data['Coeficiente angular']):.4f}x + {float(self.Data['Coeficiente linear']):.4f}")
+            plt.plot([], [], ' ', label=f"Coeficiente de correlacao: {self.R2:.4f}")
+            plt.plot([], [], ' ', label=f"Erro padrao de estimativa: {self.Syx:.4f}")
+            plt.ylabel(f'$ln({self.yname})$')
+            plt.xlabel(f'{self.xname}')
+            plt.legend(loc='best')
+            plt.grid()
+            plt.savefig(f'output\\Exponential Model.jpg', format='jpg', dpi=800)
+            plt.show()
+
+        def export(self):
+            return np.array([float(self.Data['Coeficiente linear']), float(self.Data['Coeficiente angular'])])
