@@ -32,7 +32,7 @@ wellDF1, wellinfoDF, tensionDF,  gradDF, totalprofDF, water_depth = geomec_class
 wellDF2 = geomec_classes.Bellotti(wellDF, wellinfoDF, force_condition='consolidated').calculate()
 wellDF2, wellinfoDF2, tensionDF2,  gradDF2, totalprofDF2, water_depth2 = geomec_classes.Overburden(wellDF2, wellinfoDF,name='Ex2 - Bellotti', water=0, unknownregion=1).start()
 
-geomec_classes.multiplot(wellDF1, tensionDF,  gradDF, totalprofDF, water_depth, wellDF2, tensionDF2,  gradDF2, totalprofDF2, water_depth2)
+geomec_classes.Multiplot(wellDF1, tensionDF,  gradDF, totalprofDF, water_depth, wellDF2, tensionDF2,  gradDF2, totalprofDF2, water_depth2)
 
 
 # Ex 3
