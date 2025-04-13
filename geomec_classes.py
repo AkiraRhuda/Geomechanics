@@ -500,6 +500,19 @@ class Multiplot:
         plt.show()
 
 class Hidrostaticpressure:
+    """
+    Calculate the pore tension and the pore Pressure Gradient.
+    Parameters
+    ----------
+    wellDF : DataFrame
+        Dataframe containing well information
+    wellinfoDF : DataFrame
+        Dataframe containing environment information
+    name : str
+        Parameter name (used for exporting .xlsx)
+    sumwater : bool
+        Make the class sum the water depth in the total depth
+    """
     def __init__(self, wellDF, wellinfoDF, name, sumwater=None):
         self.wellDF = wellDF
         self.wellinfoDF = wellinfoDF
@@ -546,8 +559,8 @@ class Hidrostaticpressure:
                 self.gradDF[0][i] = self.grad(self.tensionDF[0][i], self.totalprofDF[i])
                 
         
-        self.tensionDF.columns = ['Pore Tension']
-        self.gradDF.columns = ['Pore Overburden']
+        self.tensionDF.columns = ['Normal Pore Tension']
+        self.gradDF.columns = ['Normal Pore Pressure Gradient']
         wellDF = pd.concat([self.wellDF, self.tensionDF], axis=1)
 
         wellDF = pd.concat([wellDF, self.gradDF], axis=1)
@@ -559,17 +572,17 @@ class Hidrostaticpressure:
     def plot(self):
 
         # Cleaning zero values for Tension and overburden #
-        self.tensionDF['Pore Tension'] = self.tensionDF['Pore Tension'].loc[(self.tensionDF['Pore Tension'] != 0)]
-        self.gradDF['Pore Overburden'] = self.gradDF['Pore Overburden'].loc[(self.gradDF['Pore Overburden'] != 0)]
+        self.tensionDF['Normal Pore Tension'] = self.tensionDF['Normal Pore Tension'].loc[(self.tensionDF['Normal Pore Tension'] != 0)]
+        self.gradDF['Normal Pore Pressure Gradient'] = self.gradDF['Normal Pore Pressure Gradient'].loc[(self.gradDF['Normal Pore Pressure Gradient'] != 0)]
 
         plt.plot(self.tensionDF, self.wellDF['prof (m)'], color='C12', marker='o', ls='--')
         plt.xlabel('Tensão [$psi$]')
         plt.ylabel('Profundidade [$m$]')
-        plt.title('Pressão de poros $versus$ profundidade')
+        plt.title('Pressão de poros normal $versus$ profundidade')
         plt.grid()
         plt.ylim([0, self.wellDF['prof (m)'].max()])
         plt.gca().invert_yaxis()
-        plt.savefig(f'output\\{self.name} - Pressão de poros.jpg', format='jpg', dpi=800)
+        plt.savefig(f'output\\{self.name} - Pressão de poros normal.jpg', format='jpg', dpi=800)
         plt.show()
 
         plt.plot(self.gradDF, self.totalprofDF, color='purple', marker='o', ls='--')
@@ -577,18 +590,19 @@ class Hidrostaticpressure:
                    label=f'Profun máx = {self.totalprofDF.max()} $m$')
         plt.axline((0, self.water_depth), (1, self.water_depth), color='blue', ls=':',
                    label=f'Lâmi dágua = {self.water_depth} $m$')
-        plt.xlabel('Gradiente de pressão de poros [$lb/gal$]')
+        plt.xlabel('Gradiente de pressão de poros normal [$lb/gal$]')
         plt.ylabel('Profundidade [$m$]')
         plt.ylim([0, self.totalprofDF.max()])
-        plt.title('Gradiente de pressão de poros $versus$ Profundidade')
+        plt.title('Gradiente de pressão de poros normal $versus$ Profundidade')
         plt.legend(loc='best')
         plt.gca().invert_yaxis()
         plt.grid()
-        plt.savefig(f'output\\{self.name} - Gradiente de pressão de poros.jpg', format='jpg', dpi=800)
+        plt.savefig(f'output\\{self.name} - Gradiente de pressão de poros normal.jpg', format='jpg', dpi=800)
         plt.show()
-        
-    
 
+import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider    
+        
 class Eaton:
     """
         Calculate the tension and the overburden, then plot graphics and export the found values in a .xlsx file
@@ -596,17 +610,29 @@ class Eaton:
         Parameters
         ----------
         wellDF : dict or Any
-            Dataframe containing well information
+            Dataframe containing well information.
         name : str
-            Parameter name (used for exporting .xlsx)
-        """
-
-    def __init__(self, wellDF, name):
+            Parameter name (used for exporting .xlsx).
+            
+        top : int
+            Point belonging to the top of the underpressurized zone.
+        water : [0,1]
+            Set if there is water layer. 
+    """
+    def __init__(self, wellDF, wellinfoDF, name, top, exponum, sumwater=None):
         self.wellDF = wellDF
+        self.wellinfoDF = wellinfoDF
         self.name = name
+        self.top = top
+        self.exponum = exponum
+        self.sumwater = sumwater
         self.gradDF = None
-        self.start()
-        self.plot()
+        self.tensionDF = None
+        
+    
+    @staticmethod
+    def f(x, a, b):
+        return (x-a)/b
         
     def start(self):
         # Removing NaN entries #
@@ -615,72 +641,64 @@ class Eaton:
         # Data maniputalion #
         self.tensionDF = pd.DataFrame(np.zeros(len(self.wellDF.index)))
         self.gradDF = pd.DataFrame(np.zeros(len(self.wellDF.index)))
+        self.normaltransit = pd.DataFrame(np.zeros(len(self.wellDF.index)))
         self.totalprofDF = pd.DataFrame(np.zeros(len(self.wellDF.index)))
+        self.water_depth = self.wellinfoDF[2][2]
         if self.sumwater == True:
             self.totalprofDF = self.wellDF['prof (m)'] + self.wellinfoDF[2]['LÂMINA DÁGUA (m):']
         else:
             self.totalprofDF = self.wellDF['prof (m)']
-        self.unknownregion = self.unknownregion if self.unknownregion is not None else None
-        self.water = self.water if self.water is not None else None
-
-        # Extracting constants #
-        self.rho_seawater = self.wellinfoDF[2][0]
-        self.rho_region = self.wellinfoDF[2][1]
-        self.water_depth = self.wellinfoDF[2][2]
-
+        
+        a, b = classes.expmodellnx(self.wellDF, top=self.top).export()
+        #a, b = classes.autoexpmodellnx(self.wellDF, sumwater=False).export()
+        self.normaltransit['Δtn (μs/ft)'] = np.exp(self.f(self.wellDF['prof (m)'], a,b))
+        
+        if self.sumwater == 1:
+            self.normaltransit['Δtn (μs/ft)'][0] = 0
+        
         for i in range(len(self.wellDF.index)):
-            if i == self.water:  # ALWAYS SURFACE #s
-                self.tensionDF[0][i] = self.tension(self.water_depth, self.rho_seawater)
-                self.gradDF[0][i] = self.grad(self.tensionDF[0][i], self.totalprofDF[i])
-            elif i == self.unknownregion:
-                self.tensionDF[0][i] = self.tensionDF[0][i - 1] + self.tension(self.wellDF['ΔD (m)'][i],
-                                                                               self.rho_region)
-                self.gradDF[0][i] = self.grad(self.tensionDF[0][i], self.totalprofDF[i])
+            if i==0:
+                self.gradDF[0][i] = np.nan
             else:
-                self.tensionDF[0][i] = self.tensionDF[0][i - 1] + self.tension(self.wellDF['ΔD (m)'][i],
-                                                                               self.wellDF['ρ (g/cm3)'][i])
-                self.gradDF[0][i] = self.grad(self.tensionDF[0][i], self.totalprofDF[i])
-        self.tensionDF.columns = ['Tension']
-        self.gradDF.columns = ['Overburden']
-        wellDF = pd.concat([self.wellDF, self.tensionDF], axis=1)
+                self.gradDF[0][i] = self.wellDF['Overburden'][i] - (self.wellDF['Overburden'][i] - 
+                self.wellDF['Normal Pore Pressure Gradient'][i])*(self.normaltransit['Δtn (μs/ft)'][i]/self.wellDF['Δt (μs/ft)'][i])**self.exponum
 
+        self.gradDF.columns = ['Pore pressure Gradient']
         wellDF = pd.concat([self.wellDF, self.gradDF], axis=1)
         wellDF.to_excel(f'output\\{self.name}.xlsx')
         self.wellDF = wellDF
-        return self.wellDF, self.wellinfoDF, self.tensionDF, self.gradDF, self.totalprofDF, self.water_depth
+        self.plot()
+        resp = input('Deseja testar outro expoente? ')
+        if resp == 'sim' or resp == 'Sim':
+            self.exponum = float(input('Novo valor do expoente: '))
+            self.start()
+        return self.wellDF
 
     def plot(self):
 
         # Cleaning zero values for Tension and overburden #
-        self.tensionDF['Tension'] = self.tensionDF['Tension'].loc[(self.tensionDF['Tension'] != 0)]
-        self.gradDF['Overburden'] = self.gradDF['Overburden'].loc[(self.gradDF['Overburden'] != 0)]
-
-        plt.plot(self.tensionDF, self.wellDF['prof (m)'], color='C12', marker='o', ls='--')
-        plt.xlabel('Tensão [$psi$]')
-        plt.ylabel('Profundidade [$m$]')
-        plt.title('Pressão de poros $versus$ profundidade')
-        plt.grid()
-        plt.ylim([0, self.wellDF['prof (m)'].max()])
-        plt.gca().invert_yaxis()
-        plt.savefig(f'output\\{self.name} - Pressão de poros.jpg', format='jpg', dpi=800)
-        plt.show()
-
-        plt.plot(self.gradDF, self.totalprofDF, color='purple', marker='o', ls='--')
+        #self.gradDF['Overburden'] = self.gradDF['Overburden'].loc[(self.gradDF['Overburden'] != 0)]
+        plt.plot(self.gradDF, self.totalprofDF, color='green', marker='o', ls='--', label='Gradiente de pressão de poros')
+        plt.plot(self.wellDF['Overburden'], self.totalprofDF, color='red', marker='o', ls='--', label='Gradiente de sobrecarga')
+        plt.plot(self.wellDF['Normal Pore Pressure Gradient'], self.totalprofDF, color='blue', marker='o', ls='--', 
+                    label='Gradiente de pressão de poros normal')
         plt.axline((0, self.totalprofDF.max()), (1, self.totalprofDF.max()), color='black', ls=':',
                    label=f'Profun máx = {self.totalprofDF.max()} $m$')
         plt.axline((0, self.water_depth), (1, self.water_depth), color='blue', ls=':',
                    label=f'Lâmi dágua = {self.water_depth} $m$')
-        plt.xlabel('Gradiente de pressão de poros [$lb/gal$]')
+        plt.axline((0, self.wellDF['prof (m)'][self.top]), (1, self.wellDF['prof (m)'][self.top]), color='orange', ls=':',
+            label=f"Topo da zona superpressurizada = {self.wellDF['prof (m)'][self.top]} $m$")
+        plt.plot([], [], ' ', label=f"Expoente: {self.exponum:.3f}")
+        plt.xlabel('Gradientes de pressões [$lb/gal$]')
         plt.ylabel('Profundidade [$m$]')
         plt.ylim([0, self.totalprofDF.max()])
-        plt.title('Gradiente de pressão de poros $versus$ Profundidade')
+        plt.title('Gradientes de pressões $versus$ Profundidade')
         plt.legend(loc='best')
         plt.gca().invert_yaxis()
         plt.grid()
-        plt.savefig(f'output\\{self.name} - Gradiente de pressão de poros.jpg', format='jpg', dpi=800)
+        plt.savefig(f'output\\{self.name} - Gradientes de pressões.jpg', format='jpg', dpi=800)
         plt.show()
-class Normaltransittime:
-    pass
 
-class Multiplot2:
+
+class Gradientsplot:
     pass
