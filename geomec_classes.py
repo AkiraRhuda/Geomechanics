@@ -246,7 +246,7 @@ class Bellotti:
             Transit time of matrix
         force_condition : str
             Force a condition in the class, where it can be 'consolidated' or 'unconsolidated'
-        """
+    """
 
     def __init__(self, wellDF, wellinfoDF, dtmatrix=None, force_condition=None):
         self.wellDF, self.wellinfoDF, self.dtmatrix = wellDF, wellinfoDF, dtmatrix
@@ -501,7 +501,7 @@ class Multiplot:
 
 class Hidrostaticpressure:
     """
-    Calculate the pore tension and the pore Pressure Gradient.
+    Calculate the normal pore tension and the normal pore pressure gradient.
     Parameters
     ----------
     wellDF : DataFrame
@@ -599,13 +599,11 @@ class Hidrostaticpressure:
         plt.grid()
         plt.savefig(f'output\\{self.name} - Gradiente de pressão de poros normal.jpg', format='jpg', dpi=800)
         plt.show()
-
-import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider    
+        
         
 class Eaton:
     """
-        Calculate the tension and the overburden, then plot graphics and export the found values in a .xlsx file
+        Calculate the tension and the pore pressure gradient, then plot graphics and export the found values in a .xlsx file
 
         Parameters
         ----------
@@ -675,6 +673,26 @@ class Eaton:
         return self.wellDF
 
     def plot(self):
+        
+        # Cleaning zero values for Tension and overburden #
+        #self.gradDF['Overburden'] = self.gradDF['Overburden'].loc[(self.gradDF['Overburden'] != 0)]
+        plt.plot(self.gradDF, self.totalprofDF, color='green', marker='o', ls='--', label='Gradiente de pressão de poros')
+        plt.axline((0, self.totalprofDF.max()), (1, self.totalprofDF.max()), color='black', ls=':',
+                   label=f'Profun máx = {self.totalprofDF.max()} $m$')
+        plt.axline((0, self.water_depth), (1, self.water_depth), color='blue', ls=':',
+                   label=f'Lâmi dágua = {self.water_depth} $m$')
+        plt.axline((0, self.wellDF['prof (m)'][self.top]), (1, self.wellDF['prof (m)'][self.top]), color='orange', ls=':',
+            label=f"Topo da zona superpressurizada = {self.wellDF['prof (m)'][self.top]} $m$")
+        plt.plot([], [], ' ', label=f"Expoente: {self.exponum:.3f}")
+        plt.xlabel('Gradientes de pressão de poros [$lb/gal$]')
+        plt.ylabel('Profundidade [$m$]')
+        plt.ylim([0, self.totalprofDF.max()])
+        plt.title('Gradiente de pressão de poros $versus$ Profundidade')
+        plt.legend(loc='best')
+        plt.gca().invert_yaxis()
+        plt.grid()
+        plt.savefig(f'output\\{self.name} - Gradiente de pressão de poros.jpg', format='jpg', dpi=800)
+        plt.show()
 
         # Cleaning zero values for Tension and overburden #
         #self.gradDF['Overburden'] = self.gradDF['Overburden'].loc[(self.gradDF['Overburden'] != 0)]
@@ -698,7 +716,3 @@ class Eaton:
         plt.grid()
         plt.savefig(f'output\\{self.name} - Gradientes de pressões.jpg', format='jpg', dpi=800)
         plt.show()
-
-
-class Gradientsplot:
-    pass
