@@ -13,6 +13,4 @@ wellinfoDF = pd.read_excel('source\\atividade2\\DADOS_1.xlsx', skipfooter=67,hea
 wellDF1 = geomec_classes.Gardnercorrelation(wellDF, wellinfoDF, a=0.234, b=0.25).calculate()
 wellDF1, _, _,  _, _, _ = geomec_classes.Overburden(wellDF1, wellinfoDF,name='atividade2', water=0).start()
 wellDF1, _, _,  _, _, _ = geomec_classes.Hidrostaticpressure(wellDF1, wellinfoDF,name='atividade2', sumwater=False).start()
-#classes.expmodellnx(wellDF1, top=36)
 wellDF1 = geomec_classes.Eaton(wellDF1, wellinfoDF, name='atividade2', top=36, exponum=3, sumwater=False).start()
-#geomec_classes.EatonInteractiveMatplotlib(wellDF1, wellinfoDF, name="Poco1", top=36, exponum_range=(1, 4), sumwater=False)
