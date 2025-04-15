@@ -99,7 +99,7 @@ class exponentialmodel:
             return np.array([float(self.Data['Coeficiente linear']), float(self.Data['Coeficiente angular'])])
         
         
-class expmodellnx:
+class loglinmodel:
         """
         Receive the wellDF dataframe, find a linear regression, plot it and export the found
         coefficients
@@ -158,7 +158,7 @@ class expmodellnx:
             xt = np.linspace(min(self.lnx), max(self.lnx), 30)
             plt.scatter(self.lnx, self.y)
             plt.title('Ln(Tempo de Trânsito) $versus$ profundidade')
-            plt.plot(xt, self.f(xt, self.Data), color='green', label=f"Reta: ln(y) = {float(self.Data['Coeficiente angular']):.4f}x + {float(self.Data['Coeficiente linear']):.4f}")
+            plt.plot(xt, self.f(xt, self.Data), color='green', label=f"Reta: y = {float(self.Data['Coeficiente angular']):.4f}ln(x) + {float(self.Data['Coeficiente linear']):.4f}")
             plt.plot([], [], ' ', label=f"Coeficiente de correlacao: {self.R2:.4f}")
             plt.plot([], [], ' ', label=f"Erro padrao de estimativa: {self.Syx:.4f}")
             plt.ylabel('$Profundidade$ [$m$]')
@@ -166,7 +166,7 @@ class expmodellnx:
             plt.legend(loc='best')
             plt.gca().invert_yaxis()
             plt.grid()
-            plt.savefig(f'output\\Exponential Model.jpg', format='jpg', dpi=800)
+            plt.savefig(f'output\\Log-linear Model.jpg', format='jpg', dpi=800)
             plt.close()
 
         def export(self):

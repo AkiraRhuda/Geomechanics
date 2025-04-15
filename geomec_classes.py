@@ -647,7 +647,7 @@ class Eaton:
         else:
             self.totalprofDF = self.wellDF['prof (m)']
         
-        a, b = classes.expmodellnx(self.wellDF, top=self.top).export()
+        a, b = classes.loglinmodel(self.wellDF, top=self.top).export()
         #a, b = classes.autoexpmodellnx(self.wellDF, sumwater=False).export()
         self.normaltransit['Δtn (μs/ft)'] = np.exp(self.f(self.wellDF['prof (m)'], a,b))
         
