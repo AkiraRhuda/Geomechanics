@@ -379,7 +379,7 @@ class Bourgoyne:
                 self.gradDF[0][i] = self.grad(self.tensionDF[0][i], self.totalprofDF[0][i])
 
         else:
-            Exception(f"Code doesn't get up there, wait updates...")
+            raise Exception(f"Code doesn't get up there, wait updates...")
         self.totalprofDF.columns = ['new prof (m)']
         self.wellDF = pd.concat([self.wellDF, self.totalprofDF], axis=1)
         self.density = pd.DataFrame(self.density())
