@@ -1,8 +1,5 @@
-import numpy as np
 import pandas as pd
 import geomec_classes
-import matplotlib.pyplot as plt
-from pandas import read_excel
 
 # Ex 1
 wellDF = pd.read_excel('source\\correlacoes_estimativa_tensao_sobrecarga.xlsx', skiprows=4, index_col=None, decimal=',')

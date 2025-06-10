@@ -499,7 +499,7 @@ class Multiplot:
         plt.savefig(f'output\\Multiplot - Gradiente de sobrecarga.jpg', format='jpg', dpi=800)
         plt.show()
 
-class Hidrostaticpressure:
+class Hydrostaticpressure:
     """
     Calculate the normal pore tension and the normal pore pressure gradient.
     Parameters
@@ -716,3 +716,69 @@ class Eaton:
         plt.grid()
         plt.savefig(f'output\\{self.name} - Gradientes de pressões.jpg', format='jpg', dpi=800)
         plt.show()
+
+class Porepressure:
+    def __init__(self, wellDF):
+        self.wellDF = wellDF
+        self.porepressure()
+
+    @staticmethod
+    def tension(grad, depth):
+        return grad * 0.1704 * depth
+
+
+    def porepressure(self):
+        self.porepress = pd.DataFrame(np.zeros(len(self.wellDF.index)))
+        self.porepress.columns = ['Pore Pressure']
+        for i in range(len(self.wellDF.index)):
+            self.porepress['Pore Pressure'][i] = self.tension(self.wellDF['Pore pressure Gradient'][i], self.wellDF['prof (m)'][i])
+
+        self.wellDF = pd.concat([self.wellDF, self.porepress], axis=1)
+    def output(self):
+        return self.wellDF
+
+class Rockcohesion:
+    def __init__(self, wellDF):
+        self.wellDF = wellDF
+        raise NotImplementedError
+
+    def rockcohesion(self):
+        self.Co = pd.DataFrame(np.zeros(len(self.wellDF.index)))
+        self.Co.columns = ['Rock Cohesion']
+
+        for i in range(len(self.wellDF.index)):
+            self.Co['Rock Cohesion'][i] = 2*self.wellDF['angulo_atrito_interno'] # definir coeficiente angular e linear da reta
+
+        self.wellDF = pd.concat([self.wellDF, self.Co], axis=1)
+
+                                                                         # c0 = 2*S0 * (cos(phi)/(1-sen(phi))
+class Hydrostaticpressure:
+    def __init__(self, wellDF):
+        self.hidrostaticpress = pd.DataFrame(np.zeros(len(self.wellDF.index)))
+        self.hidrostaticpress.columns = ['Rock Cohesion']
+
+    def hydrostaticpressure(self):
+
+        for i in range(len(self.wellDF.index)):
+            A = 3*self.wellDF['TH']-self.wellDF['Th']-self.wellDF['Coesao(psi)']+self.wellDF['Pore Pressure']*(np.tan(np.pi/4 + self.wellDF['angulo_atrito_interno']/2)-1)
+            B = np.tan(np.pi/4+self.wellDF['angulo_atrito_interno']/2)+1
+            self.hidrostaticpress['Rock Cohesion'][i] = A/B
+
+        self.wellDF = pd.concat([self.wellDF, self.hidrostaticpress], axis=1)
+
+
+
+    def output(self):
+        return self.wellDF
+
+class Hydrostaticgradient:
+    def __init__(self, wellDF):
+        self.wellDF = wellDF
+
+    def hydrostaticgradient(self):
+        self.hydrosgradient = pd.DataFrame(np.zeros(len(self.wellDF.index)))
+
+        for i in range(len(self.wellDF.index)):
+            #self.hydrosgradient[i] =
+            pass
+
