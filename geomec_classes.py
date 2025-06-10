@@ -747,22 +747,24 @@ class Rockcohesion:
         self.Co.columns = ['Rock Cohesion']
 
         for i in range(len(self.wellDF.index)):
-            self.Co['Rock Cohesion'][i] = 2*self.wellDF['angulo_atrito_interno'] # definir coeficiente angular e linear da reta
-
+            self.Co['Rock Cohesion'][i] = 2*self.wellDF['angulo_atrito_interno']    # definir coeficiente angular e linear da reta
+                                                                                    # c0 = 2*S0 * (cos(phi)/(1-sen(phi))
         self.wellDF = pd.concat([self.wellDF, self.Co], axis=1)
 
-                                                                         # c0 = 2*S0 * (cos(phi)/(1-sen(phi))
+
 class Hydrostaticpressure:
     def __init__(self, wellDF):
+        self.wellDF = wellDF
         self.hidrostaticpress = pd.DataFrame(np.zeros(len(self.wellDF.index)))
-        self.hidrostaticpress.columns = ['Rock Cohesion']
+        self.hidrostaticpress.columns = ['Hydrostatic Pressure']
+        self.hydrostaticpressure()
 
     def hydrostaticpressure(self):
-
         for i in range(len(self.wellDF.index)):
-            A = 3*self.wellDF['TH'][i]-self.wellDF['Th'][i]-self.wellDF['Coesao(psi)'][i]+self.wellDF['Pore Pressure'][i]*(np.tan(np.pi/4 + self.wellDF['angulo_atrito_interno'][i]/2)-1)
-            B = np.tan(np.pi/4+self.wellDF['angulo_atrito_interno'][i]/2)+1
-            self.hidrostaticpress['Rock Cohesion'][i] = A/B
+            angle = np.pi/4+self.wellDF['angulo_atrito_interno'][i]/2*(np.pi/180)
+            A = 3*self.wellDF['TH'][i]-self.wellDF['Th'][i]-self.wellDF['Coesao(psi)'][i]+self.wellDF['Pore Pressure'][i]*(np.tan(angle)**2-1)
+            B = np.tan(angle)**2+1
+            self.hidrostaticpress['Hydrostatic Pressure'][i] = A/B
 
         self.wellDF = pd.concat([self.wellDF, self.hidrostaticpress], axis=1)
 
@@ -772,11 +774,62 @@ class Hydrostaticpressure:
 class Hydrostaticgradient:
     def __init__(self, wellDF):
         self.wellDF = wellDF
+        self.hidrostaticgradient = pd.DataFrame(np.zeros(len(self.wellDF.index)))
+        self.hidrostaticgradient.columns = ['Hydrostatic Gradient']
+        self.hydrostaticgradient()
+
+    @staticmethod
+    def grad(tensi, depth):
+        return tensi / (0.1704 * (depth))
 
     def hydrostaticgradient(self):
-        self.hydrosgradient = pd.DataFrame(np.zeros(len(self.wellDF.index)))
-
         for i in range(len(self.wellDF.index)):
-            #self.hydrosgradient[i] =
-            pass
+            self.hidrostaticgradient['Hydrostatic Gradient'][i] = self.grad(self.wellDF['Hydrostatic Pressure'][i], self.wellDF['prof (m)'][i])
+        self.wellDF = pd.concat([self.wellDF, self.hidrostaticgradient], axis=1)
 
+    def output(self):
+        return self.wellDF
+
+class CollapseGradient:
+    pass
+
+class FractureGradient:
+    def __init__(self, wellDF):
+        self.wellDF = wellDF
+        self.fractgrad = pd.DataFrame(np.zeros(len(self.wellDF.index)))
+        self.fractgrad.columns = ['Fracture Gradient']
+        self.fracturegradient()
+
+    def fracturegradient(self):
+        for i in range(len(self.wellDF.index)):
+            K = self.wellDF['Poisson'][i]/(1-self.wellDF['Poisson'][i])
+            self.fractgrad['Fracture Gradient'][i] = K*(self.wellDF['Overburden'][i]-self.wellDF['Pore pressure Gradient'][i])+self.wellDF['Pore pressure Gradient'][i]
+
+        self.wellDF = pd.concat([self.wellDF, self.fractgrad], axis=1)
+
+    def output(self):
+        return self.wellDF
+
+class Mudweightwindow:
+    def __init__(self, wellDF):
+        self.wellDF = wellDF
+        self.print()
+
+    def print(self):
+        plt.plot(self.wellDF['Pore pressure Gradient'], self.wellDF['prof (m)'], color='green', marker='o', ls='--', label='Gradiente de pressão de poros')
+        plt.plot(self.wellDF['Overburden'], self.wellDF['prof (m)'], color='red', marker='o', ls='--', label='Gradiente de sobrecarga')
+        plt.axline((0, self.wellDF['prof (m)'].max()), (1, self.wellDF['prof (m)'].max()), color='black', ls=':',
+                   label=f'Profun máx = {self.wellDF['prof (m)'].max()} $m$')
+        plt.axline((0, self.water_depth), (1, self.water_depth), color='blue', ls=':',
+                   label=f'Lâmi dágua = {self.water_depth} $m$')
+        plt.axline((0, self.wellDF['prof (m)'][self.top]), (1, self.wellDF['prof (m)'][self.top]), color='orange', ls=':',
+            label=f"Topo da zona superpressurizada = {self.wellDF['prof (m)'][self.top]} $m$")
+        plt.xlabel('Gradientes de pressões [$lb/gal$]')
+        plt.ylabel('Profundidade [$m$]')
+        plt.ylim([0, self.wellDF['prof (m)'].max()])
+        plt.title('Gradientes de pressões $versus$ Profundidade')
+        plt.legend(loc='best')
+        plt.gca().invert_yaxis()
+        plt.grid()
+        plt.savefig(f'output\\{self.name} - Gradientes de pressões.jpg', format='jpg', dpi=800)
+        plt.show()

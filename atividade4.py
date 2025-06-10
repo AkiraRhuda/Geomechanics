@@ -13,4 +13,7 @@ wellDF, _, _,  _, _, _ = geomec_classes.NormalTensionandGrad(wellDF, wellinfoDF,
 wellDF = geomec_classes.Eaton(wellDF, wellinfoDF, name='atividade4', top=36, exponum=3, sumwater=False).start()
 wellDF = geomec_classes.Porepressure(wellDF).output()
 wellDF = geomec_classes.Hydrostaticpressure(wellDF).output()
+wellDF = geomec_classes.Hydrostaticgradient(wellDF).output()
+wellDF = geomec_classes.FractureGradient(wellDF).output()
+geomec_classes.Mudweightwindow
 print('A')
