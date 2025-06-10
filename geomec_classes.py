@@ -1,5 +1,5 @@
 import os
-from typing import Concatenate
+#from typing import Concatenate
 
 import numpy as np
 import pandas as pd
@@ -499,7 +499,7 @@ class Multiplot:
         plt.savefig(f'output\\Multiplot - Gradiente de sobrecarga.jpg', format='jpg', dpi=800)
         plt.show()
 
-class Hydrostaticpressure:
+class NormalTensionandGrad:
     """
     Calculate the normal pore tension and the normal pore pressure gradient.
     Parameters
@@ -760,13 +760,11 @@ class Hydrostaticpressure:
     def hydrostaticpressure(self):
 
         for i in range(len(self.wellDF.index)):
-            A = 3*self.wellDF['TH']-self.wellDF['Th']-self.wellDF['Coesao(psi)']+self.wellDF['Pore Pressure']*(np.tan(np.pi/4 + self.wellDF['angulo_atrito_interno']/2)-1)
-            B = np.tan(np.pi/4+self.wellDF['angulo_atrito_interno']/2)+1
+            A = 3*self.wellDF['TH'][i]-self.wellDF['Th'][i]-self.wellDF['Coesao(psi)'][i]+self.wellDF['Pore Pressure'][i]*(np.tan(np.pi/4 + self.wellDF['angulo_atrito_interno'][i]/2)-1)
+            B = np.tan(np.pi/4+self.wellDF['angulo_atrito_interno'][i]/2)+1
             self.hidrostaticpress['Rock Cohesion'][i] = A/B
 
         self.wellDF = pd.concat([self.wellDF, self.hidrostaticpress], axis=1)
-
-
 
     def output(self):
         return self.wellDF
