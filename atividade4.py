@@ -15,5 +15,4 @@ wellDF = geomec_classes.Porepressure(wellDF).output()
 wellDF = geomec_classes.Hydrostaticpressure(wellDF).output()
 wellDF = geomec_classes.Hydrostaticgradient(wellDF).output()
 wellDF = geomec_classes.FractureGradient(wellDF).output()
-geomec_classes.Mudweightwindow
-print('A')
+geomec_classes.Mudweightwindow(wellDF, name='atividade 4')

@@ -811,25 +811,34 @@ class FractureGradient:
         return self.wellDF
 
 class Mudweightwindow:
-    def __init__(self, wellDF):
+    def __init__(self, wellDF, name):
         self.wellDF = wellDF
+        self.name = name
         self.print()
 
     def print(self):
-        plt.plot(self.wellDF['Pore pressure Gradient'], self.wellDF['prof (m)'], color='green', marker='o', ls='--', label='Gradiente de pressão de poros')
-        plt.plot(self.wellDF['Overburden'], self.wellDF['prof (m)'], color='red', marker='o', ls='--', label='Gradiente de sobrecarga')
+        plt.plot(self.wellDF['Pore pressure Gradient'], self.wellDF['prof (m)'], color='green', marker='o', ls='--',
+                 label='Gradiente de pressão de poros', lw=0.5, markersize=3)
+        plt.plot(self.wellDF['Overburden'], self.wellDF['prof (m)'], color='red', marker='o', ls='--',
+                 label='Gradiente de sobrecarga', lw=0.5, markersize=3)
+        plt.plot(self.wellDF['Hydrostatic Gradient'], self.wellDF['prof (m)'], color='orange', marker='o', ls='--',
+                 label='Gradiente de colapso hidrostático', lw=0.5, markersize=3)
+        plt.plot(self.wellDF['Fracture Gradient'], self.wellDF['prof (m)'], color='purple', marker='o', ls='--',
+                 label='Gradiente de fratura', lw=0.5, markersize=3)
+        plt.fill_betweenx(self.wellDF['prof (m)'], self.wellDF['Hydrostatic Gradient'], self.wellDF['Fracture Gradient'],
+                          where=(self.wellDF['Fracture Gradient'] > self.wellDF['Hydrostatic Gradient']), color='yellow', alpha=0.8, label='Janela Operacional')
+        plt.fill_betweenx(self.wellDF['prof (m)'], self.wellDF['Hydrostatic Gradient'], self.wellDF['Pore pressure Gradient'], color='white')
         plt.axline((0, self.wellDF['prof (m)'].max()), (1, self.wellDF['prof (m)'].max()), color='black', ls=':',
-                   label=f'Profun máx = {self.wellDF['prof (m)'].max()} $m$')
-        plt.axline((0, self.water_depth), (1, self.water_depth), color='blue', ls=':',
-                   label=f'Lâmi dágua = {self.water_depth} $m$')
-        plt.axline((0, self.wellDF['prof (m)'][self.top]), (1, self.wellDF['prof (m)'][self.top]), color='orange', ls=':',
-            label=f"Topo da zona superpressurizada = {self.wellDF['prof (m)'][self.top]} $m$")
+                   label=f'Profun máx = {self.wellDF["prof (m)"].max()} $m$')
+        plt.axline((0, self.wellDF['prof (m)'].min()), (1, self.wellDF['prof (m)'].min()), color='blue', ls=':',
+                   label=f'Lâmi dágua = {self.wellDF["prof (m)"].min()} $m$')
+
         plt.xlabel('Gradientes de pressões [$lb/gal$]')
         plt.ylabel('Profundidade [$m$]')
         plt.ylim([0, self.wellDF['prof (m)'].max()])
-        plt.title('Gradientes de pressões $versus$ Profundidade')
+        plt.title('Janela Operacional')
         plt.legend(loc='best')
         plt.gca().invert_yaxis()
         plt.grid()
-        plt.savefig(f'output\\{self.name} - Gradientes de pressões.jpg', format='jpg', dpi=800)
+        plt.savefig(f'output\\{self.name} - Mugweightwindow.jpg', format='jpg', dpi=800)
         plt.show()
