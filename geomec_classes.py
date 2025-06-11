@@ -5,8 +5,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import classes
-from pandas import read_excel
-from pandas.core.methods.selectn import SelectNSeries
 
 
 class Overburden:
@@ -52,7 +50,7 @@ class Overburden:
 
     @staticmethod
     def grad(tensi, depth):
-        return tensi / (0.1704 * (depth))
+        return tensi / (0.1704 * depth)
 
     def start(self):
         """
@@ -146,7 +144,7 @@ class Overburden:
         self.tensionDF['Tension'] = self.tensionDF['Tension'].loc[(self.tensionDF['Tension'] != 0)]
         self.gradDF['Overburden'] = self.gradDF['Overburden'].loc[(self.gradDF['Overburden'] != 0)]
 
-        plt.plot(self.tensionDF, self.wellDF['prof (m)'], color='C12', marker='o', ls='--')
+        plt.plot(self.tensionDF, self.wellDF['prof (m)'], color='C12', marker='o', markersize=3, ls='--')
         plt.xlabel('Tensão [$psi$]')
         plt.ylabel('Profundidade [$m$]')
         plt.title('Pressão da sobrecarga $versus$ profundidade')
@@ -156,7 +154,7 @@ class Overburden:
         plt.savefig(f'output\\{self.name} - Pressão sobrecarga.jpg', format='jpg', dpi=800)
         plt.show()
 
-        plt.plot(self.gradDF, self.totalprofDF, color='purple', marker='o', ls='--')
+        plt.plot(self.gradDF, self.totalprofDF, color='purple', marker='o', markersize=3, ls='--')
         plt.axline((0, self.totalprofDF.max()),(1, self.totalprofDF.max()), color='black', ls=':',
                    label=f'Profun máx = {self.totalprofDF.max()} $m$')
         plt.axline((0, self.water_depth), (1, self.water_depth), color='blue', ls=':',
@@ -171,7 +169,7 @@ class Overburden:
         plt.savefig(f'output\\{self.name} - Gradiente de sobrecarga.jpg', format='jpg', dpi=800)
         plt.show()
         
-        plt.plot(self.wellDF['ρ (g/cm3)'], self.totalprofDF, color='orange', marker='o', ls='--')
+        plt.plot(self.wellDF['ρ (g/cm3)'], self.totalprofDF, color='orange', marker='o', markersize=3, ls='--')
         plt.axline((0, self.totalprofDF.max()),(1, self.totalprofDF.max()), color='black', ls=':',
                    label=f'Profun máx = {self.totalprofDF.max()} $m$')
         plt.axline((0, self.water_depth), (1, self.water_depth), color='blue', ls=':',
@@ -188,7 +186,7 @@ class Overburden:
         if self.wellDF['Δt (μs/ft)'] is not None:
             self.wellDF.loc[self.wellDF['Δt (μs/ft)'] == 0, 'Δt (μs/ft)'] = np.nan  # exclude 0 values
 
-            plt.plot(self.wellDF['Δt (μs/ft)'], self.totalprofDF, color='orange', marker='o', ls='--')
+            plt.plot(self.wellDF['Δt (μs/ft)'], self.totalprofDF, color='orange', marker='o', markersize=3, ls='--')
             plt.axline((0, self.totalprofDF.max()),(1, self.totalprofDF.max()), color='black', ls=':',
                        label=f'Profun máx = {self.totalprofDF.max()} $m$')
             plt.axline((0, self.water_depth), (1, self.water_depth), color='blue', ls=':',
@@ -317,7 +315,7 @@ class Bourgoyne:
         self.density()
 
     def plotporosprof(self):
-        plt.plot(self.wellDF['prof (m)'], self.wellDF['Porosidade'], color='red', marker='o', ls='--')
+        plt.plot(self.wellDF['prof (m)'], self.wellDF['Porosidade'], color='red', marker='o', markersize=3, ls='--')
         plt.ylabel('Porosidade')
         plt.xlabel('Profundidade [$m$]')
         plt.title('Porosidade versus profundidade')
@@ -352,7 +350,7 @@ class Bourgoyne:
 
     def plotdensiprof(self):
         self.D = np.linspace(self.wellDF['prof (m)'].min(), self.wellDF['prof (m)'].max(), self.points)
-        plt.plot(self.density(), self.D, color='green')
+        plt.plot(self.density(), self.D, color='green', markersize=3)
         plt.grid()
         plt.title('Densidade versus profundidade')
         plt.xlabel('Densidade')
@@ -379,7 +377,7 @@ class Bourgoyne:
                 self.gradDF[0][i] = self.grad(self.tensionDF[0][i], self.totalprofDF[0][i])
 
         else:
-            raise Exception(f"Code doesn't get up there, wait updates...")
+            raise NotImplementedError(f"Code doesn't get up there, wait updates...")
         self.totalprofDF.columns = ['new prof (m)']
         self.wellDF = pd.concat([self.wellDF, self.totalprofDF], axis=1)
         self.density = pd.DataFrame(self.density())
@@ -399,7 +397,7 @@ class Bourgoyne:
         self.tensionDF['Tension'] = self.tensionDF['Tension'].loc[(self.tensionDF['Tension'] != 0)]
         self.gradDF['Overburden'] = self.gradDF['Overburden'].loc[(self.gradDF['Overburden'] != 0)]
 
-        plt.plot(self.tensionDF, self.totalprofDF, color='C12', marker='o', ls='--')
+        plt.plot(self.tensionDF, self.totalprofDF, color='C12', marker='o', markersize=3, ls='--')
         plt.xlabel('Tensão [$psi$]')
         plt.ylabel('Profundidade [$m$]')
         plt.title('Pressão da sobrecarga $versus$ profundidade')
@@ -409,7 +407,7 @@ class Bourgoyne:
         plt.savefig(f'output\\{self.name} - Pressão sobrecarga.jpg', format='jpg', dpi=800)
         plt.show()
 
-        plt.plot(self.gradDF, self.totalprofDF, color='purple', marker='o', ls='--')
+        plt.plot(self.gradDF, self.totalprofDF, color='purple', marker='o', markersize=3, ls='--')
         plt.axline((0, self.totalprofDF['new prof (m)'].max()), (10, self.totalprofDF['new prof (m)'].max()),
                    color='black', ls=':',
                    label=f'Profun máx = {float(self.totalprofDF.max())} $m$')
@@ -465,8 +463,8 @@ class Multiplot:
         self.tensionDF2['Tension'] = self.tensionDF2['Tension'].loc[(self.tensionDF2['Tension'] != 0)]
         self.gradDF2['Overburden'] = self.gradDF2['Overburden'].loc[(self.gradDF2['Overburden'] != 0)]
 
-        plt.plot(self.tensionDF, self.wellDF['prof (m)'], color='red', marker='o', ls='--', label='Well 1')
-        plt.plot(self.tensionDF2, self.wellDF2['prof (m)'], color='C12', marker='o', ls='--', label='Well 2')
+        plt.plot(self.tensionDF, self.wellDF['prof (m)'], color='red', marker='o', markersize=3, ls='--', label='Well 1')
+        plt.plot(self.tensionDF2, self.wellDF2['prof (m)'], color='C12', marker='o', markersize=3, ls='--', label='Well 2')
         plt.xlabel('Tensão [$psi$]')
         plt.ylabel('Profundidade [$m$]')
         plt.title('Pressão da sobrecarga $versus$ profundidade')
@@ -481,8 +479,8 @@ class Multiplot:
         plt.savefig(f'output\\Multiplot - Pressão da sobrecarga.jpg', format='jpg', dpi=800)
         plt.show()
 
-        plt.plot(self.gradDF, self.totalprofDF, color='purple', marker = 'o', ls = '--', label='Well 1')
-        plt.plot(self.gradDF2, self.totalprofDF2, color='yellow', marker = 'o', ls = '--', label='Well 2')
+        plt.plot(self.gradDF, self.totalprofDF, color='purple', marker = 'o', markersize=3, ls = '--', label='Well 1')
+        plt.plot(self.gradDF2, self.totalprofDF2, color='yellow', marker = 'o', markersize=3, ls = '--', label='Well 2')
         plt.axline((0, self.totalprofDF.max()), (10, self.totalprofDF.max()), color='black', ls=':',
                    label=f'Profun máx well 1 = {self.totalprofDF.max()} $m$')
         plt.axline((0, self.totalprofDF2.max()), (10, self.totalprofDF2.max()), color='gray', ls=':',
@@ -504,7 +502,7 @@ class NormalTensionandGrad:
     Calculate the normal pore tension and the normal pore pressure gradient.
     Parameters
     ----------
-    wellDF : DataFrame
+    wellDF : pd.DataFrame
         Dataframe containing well information
     wellinfoDF : DataFrame
         Dataframe containing environment information
@@ -575,7 +573,7 @@ class NormalTensionandGrad:
         self.tensionDF['Normal Pore Tension'] = self.tensionDF['Normal Pore Tension'].loc[(self.tensionDF['Normal Pore Tension'] != 0)]
         self.gradDF['Normal Pore Pressure Gradient'] = self.gradDF['Normal Pore Pressure Gradient'].loc[(self.gradDF['Normal Pore Pressure Gradient'] != 0)]
 
-        plt.plot(self.tensionDF, self.wellDF['prof (m)'], color='C12', marker='o', ls='--')
+        plt.plot(self.tensionDF, self.wellDF['prof (m)'], color='C12', marker='o', markersize=3, ls='--')
         plt.xlabel('Tensão [$psi$]')
         plt.ylabel('Profundidade [$m$]')
         plt.title('Pressão de poros normal $versus$ profundidade')
@@ -585,7 +583,7 @@ class NormalTensionandGrad:
         plt.savefig(f'output\\{self.name} - Pressão de poros normal.jpg', format='jpg', dpi=800)
         plt.show()
 
-        plt.plot(self.gradDF, self.totalprofDF, color='purple', marker='o', ls='--')
+        plt.plot(self.gradDF, self.totalprofDF, color='purple', marker='o', markersize=3, ls='--')
         plt.axline((0, self.totalprofDF.max()), (1, self.totalprofDF.max()), color='black', ls=':',
                    label=f'Profun máx = {self.totalprofDF.max()} $m$')
         plt.axline((0, self.water_depth), (1, self.water_depth), color='blue', ls=':',
@@ -607,15 +605,15 @@ class Eaton:
 
         Parameters
         ----------
-        wellDF : dict or Any
+        wellDF: dict or Any
             Dataframe containing well information.
         name : str
             Parameter name (used for exporting .xlsx).
             
         top : int
             Point belonging to the top of the underpressurized zone.
-        water : [0,1]
-            Set if there is water layer. 
+        sumwater : [0,1]
+            Set if it will sum the water layer.
     """
     def __init__(self, wellDF, wellinfoDF, name, top, exponum, sumwater=None):
         self.wellDF = wellDF
@@ -676,7 +674,7 @@ class Eaton:
         
         # Cleaning zero values for Tension and overburden #
         #self.gradDF['Overburden'] = self.gradDF['Overburden'].loc[(self.gradDF['Overburden'] != 0)]
-        plt.plot(self.gradDF, self.totalprofDF, color='green', marker='o', ls='--', label='Gradiente de pressão de poros')
+        plt.plot(self.gradDF, self.totalprofDF, color='green', marker='o', markersize=3, ls='--', label='Gradiente de pressão de poros')
         plt.axline((0, self.totalprofDF.max()), (1, self.totalprofDF.max()), color='black', ls=':',
                    label=f'Profun máx = {self.totalprofDF.max()} $m$')
         plt.axline((0, self.water_depth), (1, self.water_depth), color='blue', ls=':',
@@ -696,9 +694,9 @@ class Eaton:
 
         # Cleaning zero values for Tension and overburden #
         #self.gradDF['Overburden'] = self.gradDF['Overburden'].loc[(self.gradDF['Overburden'] != 0)]
-        plt.plot(self.gradDF, self.totalprofDF, color='green', marker='o', ls='--', label='Gradiente de pressão de poros')
-        plt.plot(self.wellDF['Overburden'], self.totalprofDF, color='red', marker='o', ls='--', label='Gradiente de sobrecarga')
-        plt.plot(self.wellDF['Normal Pore Pressure Gradient'], self.totalprofDF, color='blue', marker='o', ls='--', 
+        plt.plot(self.gradDF, self.totalprofDF, color='green', marker='o', markersize=3, ls='--', label='Gradiente de pressão de poros')
+        plt.plot(self.wellDF['Overburden'], self.totalprofDF, color='red', marker='o', markersize=3, ls='--', label='Gradiente de sobrecarga')
+        plt.plot(self.wellDF['Normal Pore Pressure Gradient'], self.totalprofDF, color='blue', marker='o', markersize=3, ls='--',
                     label='Gradiente de pressão de poros normal')
         plt.axline((0, self.totalprofDF.max()), (1, self.totalprofDF.max()), color='black', ls=':',
                    label=f'Profun máx = {self.totalprofDF.max()} $m$')
@@ -772,6 +770,13 @@ class Hydrostaticpressure:
         return self.wellDF
 
 class Hydrostaticgradient:
+    """
+    Calculate the hydrostatic gradient of hydrostatic pressure
+    Parameters
+    ------
+    wellDF: dict or Any
+        Dataframe containing well information.
+    """
     def __init__(self, wellDF):
         self.wellDF = wellDF
         self.hidrostaticgradient = pd.DataFrame(np.zeros(len(self.wellDF.index)))
@@ -790,10 +795,20 @@ class Hydrostaticgradient:
     def output(self):
         return self.wellDF
 
-class CollapseGradient:
-    pass
+class CollapseGradient(Hydrostaticgradient):
+    def __init__(self, wellDF):
+        RuntimeWarning('Collapse gradient implemented as Hydrostaticgradient class')
+        super().__init__(wellDF)
 
 class FractureGradient:
+    """
+    Calculate the fracture gradient
+
+    Parameters
+        ----------
+        wellDF: dict or Any
+            Dataframe containing well information.
+    """
     def __init__(self, wellDF):
         self.wellDF = wellDF
         self.fractgrad = pd.DataFrame(np.zeros(len(self.wellDF.index)))
@@ -811,6 +826,16 @@ class FractureGradient:
         return self.wellDF
 
 class Mudweightwindow:
+    """
+    Print and save the figure containing the mug weight window
+
+    Parameters
+        ----------
+        wellDF: dict or Any
+            Dataframe containing well information.
+        name : str
+            Parameter name (used for exporting .png).
+    """
     def __init__(self, wellDF, name):
         self.wellDF = wellDF
         self.name = name
@@ -822,7 +847,7 @@ class Mudweightwindow:
         plt.plot(self.wellDF['Overburden'], self.wellDF['prof (m)'], color='red', marker='o', ls='--',
                  label='Gradiente de sobrecarga', lw=0.5, markersize=3)
         plt.plot(self.wellDF['Hydrostatic Gradient'], self.wellDF['prof (m)'], color='orange', marker='o', ls='--',
-                 label='Gradiente de colapso hidrostático', lw=0.5, markersize=3)
+                 label='Gradiente de colapso', lw=0.5, markersize=3)
         plt.plot(self.wellDF['Fracture Gradient'], self.wellDF['prof (m)'], color='purple', marker='o', ls='--',
                  label='Gradiente de fratura', lw=0.5, markersize=3)
         plt.fill_betweenx(self.wellDF['prof (m)'], self.wellDF['Hydrostatic Gradient'], self.wellDF['Fracture Gradient'],
@@ -832,7 +857,6 @@ class Mudweightwindow:
                    label=f'Profun máx = {self.wellDF["prof (m)"].max()} $m$')
         plt.axline((0, self.wellDF['prof (m)'].min()), (1, self.wellDF['prof (m)'].min()), color='blue', ls=':',
                    label=f'Lâmi dágua = {self.wellDF["prof (m)"].min()} $m$')
-
         plt.xlabel('Gradientes de pressões [$lb/gal$]')
         plt.ylabel('Profundidade [$m$]')
         plt.ylim([0, self.wellDF['prof (m)'].max()])
@@ -842,3 +866,13 @@ class Mudweightwindow:
         plt.grid()
         plt.savefig(f'output\\{self.name} - Mugweightwindow.jpg', format='jpg', dpi=800)
         plt.show()
+
+class MohrCircle:
+    def __init__(self, wellDF=None, name=None,sigma1=None, sigma3=None):
+        self.wellDF = wellDF
+        self.name = name
+        self.sigma1 = sigma1
+        self.sigma3 = sigma3
+
+    def model(self):
+        phi = np.arcsin()
