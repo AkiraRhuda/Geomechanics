@@ -665,10 +665,10 @@ class Eaton:
         self.wellDF = wellDF
         self.plot()
         resp = input('Deseja testar outro expoente? ')
-        if resp == 'sim' or resp == 'Sim':
+        if resp == 'sim' or resp == 'Sim' or resp == 's' or resp == 'S':
             self.exponum = float(input('Novo valor do expoente: '))
             self.start()
-        return self.wellDF
+        return self.wellDF, self.top
 
     def plot(self):
         
@@ -724,7 +724,6 @@ class Porepressure:
     def tension(grad, depth):
         return grad * 0.1704 * depth
 
-
     def porepressure(self):
         self.porepress = pd.DataFrame(np.zeros(len(self.wellDF.index)))
         self.porepress.columns = ['Pore Pressure']
@@ -769,9 +768,9 @@ class Hydrostaticpressure:
     def output(self):
         return self.wellDF
 
-class Hydrostaticgradient:
+class CollapseGradient:
     """
-    Calculate the hydrostatic gradient of hydrostatic pressure
+    Calculate the collapse gradient of hydrostatic pressure
     Parameters
     ------
     wellDF: dict or Any
@@ -779,26 +778,21 @@ class Hydrostaticgradient:
     """
     def __init__(self, wellDF):
         self.wellDF = wellDF
-        self.hidrostaticgradient = pd.DataFrame(np.zeros(len(self.wellDF.index)))
-        self.hidrostaticgradient.columns = ['Hydrostatic Gradient']
-        self.hydrostaticgradient()
+        self.collapsegradientdf = pd.DataFrame(np.zeros(len(self.wellDF.index)))
+        self.collapsegradientdf.columns = ['Collapse Gradient']
+        self.collapsegradient()
 
     @staticmethod
     def grad(tensi, depth):
         return tensi / (0.1704 * (depth))
 
-    def hydrostaticgradient(self):
+    def collapsegradient(self):
         for i in range(len(self.wellDF.index)):
-            self.hidrostaticgradient['Hydrostatic Gradient'][i] = self.grad(self.wellDF['Hydrostatic Pressure'][i], self.wellDF['prof (m)'][i])
-        self.wellDF = pd.concat([self.wellDF, self.hidrostaticgradient], axis=1)
+            self.collapsegradientdf['Collapse Gradient'][i] = self.grad(self.wellDF['Hydrostatic Pressure'][i], self.wellDF['prof (m)'][i])
+        self.wellDF = pd.concat([self.wellDF, self.collapsegradientdf], axis=1)
 
     def output(self):
         return self.wellDF
-
-class CollapseGradient(Hydrostaticgradient):
-    def __init__(self, wellDF):
-        RuntimeWarning('Collapse gradient implemented as Hydrostaticgradient class')
-        super().__init__(wellDF)
 
 class FractureGradient:
     """
@@ -835,28 +829,35 @@ class Mudweightwindow:
             Dataframe containing well information.
         name : str
             Parameter name (used for exporting .png).
+        top : float
+            Top of super pressurized zone
     """
-    def __init__(self, wellDF, name):
+    def __init__(self, wellDF, name, top=None):
         self.wellDF = wellDF
         self.name = name
+        self.top = top
         self.print()
+        self.mohrcircle()
 
     def print(self):
         plt.plot(self.wellDF['Pore pressure Gradient'], self.wellDF['prof (m)'], color='green', marker='o', ls='--',
                  label='Gradiente de pressão de poros', lw=0.5, markersize=3)
         plt.plot(self.wellDF['Overburden'], self.wellDF['prof (m)'], color='red', marker='o', ls='--',
                  label='Gradiente de sobrecarga', lw=0.5, markersize=3)
-        plt.plot(self.wellDF['Hydrostatic Gradient'], self.wellDF['prof (m)'], color='orange', marker='o', ls='--',
+        plt.plot(self.wellDF['Collapse Gradient'], self.wellDF['prof (m)'], color='orange', marker='o', ls='--',
                  label='Gradiente de colapso', lw=0.5, markersize=3)
         plt.plot(self.wellDF['Fracture Gradient'], self.wellDF['prof (m)'], color='purple', marker='o', ls='--',
                  label='Gradiente de fratura', lw=0.5, markersize=3)
-        plt.fill_betweenx(self.wellDF['prof (m)'], self.wellDF['Hydrostatic Gradient'], self.wellDF['Fracture Gradient'],
-                          where=(self.wellDF['Fracture Gradient'] > self.wellDF['Hydrostatic Gradient']), color='yellow', alpha=0.8, label='Janela Operacional')
-        plt.fill_betweenx(self.wellDF['prof (m)'], self.wellDF['Hydrostatic Gradient'], self.wellDF['Pore pressure Gradient'], color='white')
+        plt.fill_betweenx(self.wellDF['prof (m)'], self.wellDF['Collapse Gradient'], self.wellDF['Fracture Gradient'],
+                          where=(self.wellDF['Fracture Gradient'] > self.wellDF['Collapse Gradient']), color='yellow', alpha=0.8, label='Janela Operacional')
+        plt.fill_betweenx(self.wellDF['prof (m)'], self.wellDF['Collapse Gradient'], self.wellDF['Pore pressure Gradient'], color='white')
         plt.axline((0, self.wellDF['prof (m)'].max()), (1, self.wellDF['prof (m)'].max()), color='black', ls=':',
                    label=f'Profun máx = {self.wellDF["prof (m)"].max()} $m$')
         plt.axline((0, self.wellDF['prof (m)'].min()), (1, self.wellDF['prof (m)'].min()), color='blue', ls=':',
                    label=f'Lâmi dágua = {self.wellDF["prof (m)"].min()} $m$')
+        if self.top is not None:
+            plt.axline((0, self.wellDF['prof (m)'][self.top]), (1, self.wellDF['prof (m)'][self.top]), color='orange',
+                       ls=':',label=f"Topo da zona superpressurizada = {self.wellDF['prof (m)'][self.top]} $m$")
         plt.xlabel('Gradientes de pressões [$lb/gal$]')
         plt.ylabel('Profundidade [$m$]')
         plt.ylim([0, self.wellDF['prof (m)'].max()])
@@ -866,13 +867,185 @@ class Mudweightwindow:
         plt.grid()
         plt.savefig(f'output\\{self.name} - Mugweightwindow.jpg', format='jpg', dpi=800)
         plt.show()
+        self.wellDF.to_excel(f'output\\{self.name}.xlsx')
+
+    def mohrcircle(self):
+        supzone = self.top-5
+        infzone = self.top+5
+        zones = [supzone, infzone]
+        plt.plot(self.wellDF['Pore pressure Gradient'], self.wellDF['prof (m)'], color='green', marker='o', ls='--',
+                 label='Gradiente de pressão de poros', lw=0.5, markersize=3)
+        plt.plot(self.wellDF['Overburden'], self.wellDF['prof (m)'], color='red', marker='o', ls='--',
+                 label='Gradiente de sobrecarga', lw=0.5, markersize=3)
+        plt.plot(self.wellDF['Collapse Gradient'], self.wellDF['prof (m)'], color='orange', marker='o', ls='--',
+                 label='Gradiente de colapso', lw=0.5, markersize=3)
+        plt.plot(self.wellDF['Fracture Gradient'], self.wellDF['prof (m)'], color='purple', marker='o', ls='--',
+                 label='Gradiente de fratura', lw=0.5, markersize=3)
+        plt.fill_betweenx(self.wellDF['prof (m)'], self.wellDF['Collapse Gradient'], self.wellDF['Fracture Gradient'],
+                          where=(self.wellDF['Fracture Gradient'] > self.wellDF['Collapse Gradient']), color='yellow', alpha=0.8, label='Janela Operacional')
+        plt.fill_betweenx(self.wellDF['prof (m)'], self.wellDF['Collapse Gradient'], self.wellDF['Pore pressure Gradient'], color='white')
+        plt.axline((0, self.wellDF['prof (m)'].max()), (1, self.wellDF['prof (m)'].max()), color='black', ls=':',
+                   label=f'Profun máx = {self.wellDF["prof (m)"].max()} $m$')
+        plt.axline((0, self.wellDF['prof (m)'].min()), (1, self.wellDF['prof (m)'].min()), color='blue', ls=':',
+                   label=f'Lâmi dágua = {self.wellDF["prof (m)"].min()} $m$')
+        if self.top is not None:
+            plt.axline((0, self.wellDF['prof (m)'][self.top]), (1, self.wellDF['prof (m)'][self.top]), color='orange',
+                       ls=':',label=f"Topo da zona superpressurizada = {self.wellDF['prof (m)'][self.top]} $m$")
+        for zone in zones:
+            plt.scatter(y=self.wellDF['prof (m)'][zone], x=self.wellDF['Collapse Gradient'][zone], marker='x', color='red')
+            plt.scatter(y=self.wellDF['prof (m)'][zone], x=self.wellDF['Collapse Gradient'][zone] * 1.1, marker='x', color='blue')
+            plt.scatter(y=self.wellDF['prof (m)'][zone], x=self.wellDF['Fracture Gradient'][zone] * 0.9, marker='x', color='green')
+            plt.scatter(y=self.wellDF['prof (m)'][zone], x=self.wellDF['Fracture Gradient'][zone], marker='x', color='purple')
+        plt.xlabel('Gradientes de pressões [$lb/gal$]')
+        plt.ylabel('Profundidade [$m$]')
+        plt.ylim([0, self.wellDF['prof (m)'].max()])
+        plt.title('Janela Operacional')
+        plt.legend(loc='best')
+        plt.gca().invert_yaxis()
+        plt.grid()
+        plt.savefig(f'output\\{self.name} - Mugweightwindow Mohr positions.jpg', format='jpg', dpi=800)
+        plt.show()
+
+        for zone in zones:
+            Gw = self.wellDF['Collapse Gradient'][zone]
+            Pw = Gw * 0.1704 * self.wellDF['prof (m)'][zone]
+            sigmar = Pw - self.wellDF['Pore Pressure'][zone]
+            sigmathetamax = 3*self.wellDF['TH'][zone]-self.wellDF['Th'][zone] - Pw - self.wellDF['Pore Pressure'][zone]
+            sigmathetamin = 3*self.wellDF['Th'][zone]-self.wellDF['TH'][zone] - Pw - self.wellDF['Pore Pressure'][zone]
+            tension = [sigmar, sigmathetamax, sigmathetamin]
+            Gw2 = self.wellDF['Collapse Gradient'][zone] * 1.10
+            Pw2 = Gw2 * 0.1704 * self.wellDF['prof (m)'][zone]
+            sigmar2 = Pw2 - self.wellDF['Pore Pressure'][zone]
+            sigmathetamax2 = 3*self.wellDF['TH'][zone]-self.wellDF['Th'][zone] - Pw2 - self.wellDF['Pore Pressure'][zone]
+            sigmathetamin2 = 3*self.wellDF['Th'][zone]-self.wellDF['TH'][zone] - Pw2 - self.wellDF['Pore Pressure'][zone]
+            tension2 = [sigmar2, sigmathetamax2, sigmathetamin2]
+            Gw3 = self.wellDF['Fracture Gradient'][zone] * 0.9
+            Pw3 = Gw3 * 0.1704 * self.wellDF['prof (m)'][zone]
+            sigmar3 = Pw3 - self.wellDF['Pore Pressure'][zone]
+            sigmathetamax3 = 3 * self.wellDF['TH'][zone] - self.wellDF['Th'][zone] - Pw3 - self.wellDF['Pore Pressure'][zone]
+            sigmathetamin3 = 3 * self.wellDF['Th'][zone] - self.wellDF['TH'][zone] - Pw3 - self.wellDF['Pore Pressure'][zone]
+            tension3 = [sigmar3, sigmathetamax3, sigmathetamin3]
+            Gw4 = self.wellDF['Fracture Gradient'][zone]
+            Pw4 = Gw4 * 0.1704 * self.wellDF['prof (m)'][zone]
+            sigmar4 = Pw4 - self.wellDF['Pore Pressure'][zone]
+            sigmathetamax4 = 3 * self.wellDF['TH'][zone] - self.wellDF['Th'][zone] - Pw4 - self.wellDF['Pore Pressure'][zone]
+            sigmathetamin4 = 3 * self.wellDF['Th'][zone] - self.wellDF['TH'][zone] - Pw4 - self.wellDF['Pore Pressure'][zone]
+            tension4 = [sigmar4, sigmathetamax4, sigmathetamin4]
+            index = ['Sigmar', 'sigmathetamax', 'sigmathetamin']
+            data = {'Tensions' : index, 'Circle 1' : tension, 'Circle 2' : tension2, 'Circle 3' : tension3, 'Circle 4' : tension4}
+            DataFrame = pd.DataFrame(data=data)
+            DataFrame.to_excel(f'output\\{self.name} - Zone {zone}.xlsx')
+            sigma1 = [max(tension) , max(tension2), max(tension3), max(tension4)]
+            sigma1 = pd.Series(sigma1)
+            sigma3 = [min(tension), min(tension2), min(tension3), min(tension4)]
+            sigma3 = pd.Series(sigma3)
+            MohrCircle(sigma1, sigma3, name=f'Circulo de Mohr zona {zone}', S0=self.wellDF['Coesao(psi)'][zone], phi=self.wellDF['angulo_atrito_interno'][zone]*np.pi/180)
+
 
 class MohrCircle:
-    def __init__(self, wellDF=None, name=None,sigma1=None, sigma3=None):
-        self.wellDF = wellDF
-        self.name = name
+    """
+        Calculate and print a Mohr Circle given the sigma 1 and sigma 3 values
+
+        Parameters
+            ----------
+            sigma1: DataFrame
+                Dataframe containing sigma 1 values.
+            sigma3 : DataFrame
+                Dataframe containing sigma 3 values.
+            name : str
+                Name of the image that will be printed and saved.
+            linemodel: bool
+                 Defines whether or not the line model will be made.
+        """
+    def __init__(self, sigma1, sigma3, name=None, linemodel=None, S0=None, phi=None):
+        #self.wellDF = wellDF
+        #self.name = name
+        if len(sigma1) != len(sigma3):
+            raise Exception('Sigma1 and Sigma3 must have same length!')
+
         self.sigma1 = sigma1
         self.sigma3 = sigma3
+        self.S0, self.phi = S0, phi
+        self.failplaneangle, self.failplaneforces = None, None
+        self.linemodel = linemodel
+        self.name = name
+        if self.linemodel is True:
+            self.model()
+            self.calculate()
+        elif self.S0 is not None and self.phi is not None:
+            self.calculate()
+        else:
+            pass
+        self.plot()
+
+    @staticmethod
+    def mohrcoulombcriteria(x, a, b):
+        return  np.tan(a)*x + b
+
+    @staticmethod
+    def sheartension(sigma1, sigma3, failplaneangle):
+        return (sigma1-sigma3)/2*np.sin(2*failplaneangle)
+
+
+    @staticmethod
+    def normaltension(sigma1, sigma3, failplaneangle):
+        return (sigma1+sigma3)/2 + (sigma1-sigma3)/2*np.cos(2*failplaneangle)
 
     def model(self):
-        phi = np.arcsin()
+        linear, angular = classes.linearmodel(self.sigma3, self.sigma1).export()
+        self.phi = np.arcsin((angular-1)/(angular+1))
+        self.S0 = linear/2*(1-np.sin(self.phi))/(np.cos(self.phi))
+
+    def calculate(self):
+        self.failplaneangle = 45 + self.phi/2 * 180/np.pi
+        index = [f"Circle {i+1}" for i in range(len(self.sigma1))]
+        columns = ["Normal tension", "Shear tension"]
+        self.failplaneforces = pd.DataFrame(index=index, columns=columns)
+        for i in range(len(self.sigma1)):
+            self.failplaneforces["Normal tension"][f'Circle {i+1}'] = self.normaltension(self.sigma1[i], self.sigma3[i], self.failplaneangle*np.pi/180)
+            self.failplaneforces["Shear tension"][f'Circle {i+1}'] = self.sheartension(self.sigma1[i], self.sigma3[i], self.failplaneangle*np.pi/180)
+
+
+    def plot(self):
+        color = ['red', 'blue', 'green', 'purple', 'orange', 'cyan', 'magenta', 'yellow']
+        rd = []
+        fig, ax = plt.subplots()
+        for i in range(len(self.sigma1)):
+            radius = (self.sigma1[i] - self.sigma3[i])/2
+            x0 = radius + self.sigma3[i]
+            y0 = 0
+            circle = plt.Circle((x0, y0), radius, color=color[i], fill=False,
+                                label=f'Corpo de prova {i}: [{self.sigma1[i]:.3f}, {self.sigma3[i]:.3f}]')
+            ax.add_patch(circle)
+            rd.append(abs(radius))
+        ax.grid()
+        ax.set_xlabel('Tensão [psi]')
+        ax.set_ylabel('Cisalhamento [psi]')
+        ax.legend()
+        if self.sigma1.max() > self.sigma3.max() and self.sigma3.min() > 0:
+            ax.set_xlim(0, self.sigma1.max() * 1.1)
+            x = np.linspace(0, self.sigma1.max())
+        elif self.sigma3.max() > self.sigma1.max() and self.sigma3.min() > 0:
+            ax.set_xlim(0, self.sigma3.max() * 1.1)
+            x = np.linspace(0, self.sigma3.max())
+        elif self.sigma1.max() > self.sigma3.max() and self.sigma3.min() < 0:
+            ax.set_xlim(self.sigma3.min() *1.1, self.sigma1.max() * 1.1)
+            x = np.linspace(self.sigma3.min(), self.sigma1.max())
+        else:
+            ax.set_xlim(self.sigma3.min() *1.1, self.sigma3.max() * 1.1)
+            x = np.linspace(self.sigma3.min(), self.sigma3.max())
+        ax.set_ylim(-max(rd) * 1.1, max(rd) * 1.1)
+
+        if self.S0 is not None and self.phi is not None:
+            ax.plot(x, self.mohrcoulombcriteria(x, self.phi, self.S0), color='black',
+                    label=f"Modelo: y = {float(np.tan(self.phi)):.4f}x + {float(self.S0):.4f}")
+        if self.name is None:
+            ax.set_title('Círculo de Mohr')
+            fig.savefig(f'output\\Círculo de Mohr.jpg', format='jpg', dpi=800)
+        else:
+            ax.set_title(self.name)
+            fig.savefig(f'output\\{self.name}.jpg', format='jpg', dpi=800)
+        plt.show()
+
+    def export(self):
+        return self.phi, self.S0, self.failplaneforces

@@ -256,3 +256,74 @@ class autoexpmodellnx:
             self.fit()
             self.plot()
             return np.array([float(self.Data['Coeficiente linear']), float(self.Data['Coeficiente angular'])])
+
+class linearmodel:
+    """
+           Receive the wellDF dataframe, find a linear regression, plot it and export the found
+           coefficients
+
+           Parameters
+           ----------
+           wellDF : dict or Any
+               Dataframe containing well information
+           """
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def fit(self):
+        #self.wellDF = self.wellDF.fillna(0)
+        #self.wellDF = self.wellDF.drop(0)
+        #self.x, self.y = self.wellDF['Δt (μs/ft)'], self.wellDF['prof (m)']
+        sum_xi = sum(self.x)
+        sum_xi2 = sum(self.x ** 2)
+        sum_xiyi = sum(self.x * self.y)
+        sum_yi = sum(self.y)
+
+        n = len(self.x)
+        matriz_coef = np.array([[n, sum_xi], [sum_xi, sum_xi2]])
+
+        A = matriz_coef
+
+        matriz_resp = np.array([[sum_yi], [sum_xiyi]])
+
+        b = matriz_resp
+
+        a = GaussIngenua(A, b)
+        self.Data = pd.DataFrame()
+        self.Data['Coeficiente angular'] = [a[1]]
+        self.Data['Coeficiente linear'] = [a[0]]
+
+    @staticmethod
+    def f(x, a):
+        return float(a['Coeficiente linear']) + float(a['Coeficiente angular']) * x
+
+    def statistics(self):
+        # Estatisticas
+        ymean = sum(self.y) / len(self.y)
+        St = sum((self.y - ymean) ** 2)
+        Sr = np.sum((self.y - self.f(self.x, self.Data)) ** 2)
+        self.R2 = (St - Sr) / St  # Coeficiente de correlacao
+        self.Syx = (Sr / (len(self.y) - 2)) ** (1 / 2)  # Erro padrao de estimativa
+
+    def plot(self):
+        xt = np.linspace(min(self.x), max(self.x), 30)
+        plt.scatter(self.x, self.y)
+        plt.title('Ajuste de reta')
+        plt.plot(xt, self.f(xt, self.Data), color='green',
+                 label=f"Reta: y = {float(self.Data['Coeficiente angular']):.4f}x + {float(self.Data['Coeficiente linear']):.4f}")
+        plt.plot([], [], ' ', label=f"Coeficiente de correlacao: {self.R2:.4f}")
+        plt.plot([], [], ' ', label=f"Erro padrao de estimativa: {self.Syx:.4f}")
+        plt.ylabel('y(x)')
+        plt.xlabel('x')
+        plt.legend(loc='best')
+        plt.grid()
+        plt.savefig(f'output\\Ajuste de reta.jpg', format='jpg', dpi=800)
+        plt.close()
+
+    def export(self):
+        self.fit()
+        self.statistics()
+        self.plot()
+        return np.array([float(self.Data['Coeficiente linear']), float(self.Data['Coeficiente angular'])])
