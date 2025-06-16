@@ -742,19 +742,23 @@ class Porepressure:
     def output(self):
         return self.wellDF
 
-class Rockcohesion:
+class Unconfinedcompressforce:
     def __init__(self, wellDF):
         self.wellDF = wellDF
-        raise NotImplementedError
+        self.rockcohesion()
 
     def rockcohesion(self):
         self.Co = pd.DataFrame(np.zeros(len(self.wellDF.index)))
-        self.Co.columns = ['Rock Cohesion']
+        self.Co.columns = ['Unconfined compress force (Co)']
 
         for i in range(len(self.wellDF.index)):
-            self.Co['Rock Cohesion'][i] = 2*self.wellDF['angulo_atrito_interno']    # definir coeficiente angular e linear da reta
-                                                                                    # c0 = 2*S0 * (cos(phi)/(1-sen(phi))
+            self.Co['Unconfined compress force (Co)'][i] = (2*self.wellDF['Coesao(psi)'][i]*(np.cos(self.wellDF['angulo_atrito_interno'][i]*np.pi/180))
+                                /(1-np.sin(self.wellDF['angulo_atrito_interno'][i]*np.pi/180)))
+
         self.wellDF = pd.concat([self.wellDF, self.Co], axis=1)
+
+    def output(self):
+        return self.wellDF
 
 
 class Hydrostaticpressure:
@@ -767,7 +771,7 @@ class Hydrostaticpressure:
     def hydrostaticpressure(self):
         for i in range(len(self.wellDF.index)):
             angle = np.pi/4+self.wellDF['angulo_atrito_interno'][i]/2*(np.pi/180)
-            A = 3*self.wellDF['TH'][i]-self.wellDF['Th'][i]-self.wellDF['Coesao(psi)'][i]+self.wellDF['Pore Pressure'][i]*(np.tan(angle)**2-1)
+            A = 3*self.wellDF['TH'][i]-self.wellDF['Th'][i]-self.wellDF['Unconfined compress force (Co)'][i]+self.wellDF['Pore Pressure'][i]*(np.tan(angle)**2-1)
             B = np.tan(angle)**2+1
             self.hidrostaticpress['Hydrostatic Pressure'][i] = A/B
 
@@ -914,7 +918,7 @@ class Mudweightwindow:
         plt.savefig(f'output\\{self.name} - Mugweightwindow Mohr positions.jpg', format='jpg', dpi=800)
         plt.show()
 
-        for zone in zones:
+        """for zone in zones:
             Gw = self.wellDF['Collapse Gradient'][zone]
             Pw = Gw * 0.1704 * self.wellDF['prof (m)'][zone]
             sigmar = Pw - self.wellDF['Pore Pressure'][zone]
@@ -939,6 +943,64 @@ class Mudweightwindow:
             sigmathetamax4 = 3 * self.wellDF['TH'][zone] - self.wellDF['Th'][zone] - Pw4 - self.wellDF['Pore Pressure'][zone]
             sigmathetamin4 = 3 * self.wellDF['Th'][zone] - self.wellDF['TH'][zone] - Pw4 - self.wellDF['Pore Pressure'][zone]
             tension4 = [sigmar4, sigmathetamax4, sigmathetamin4]
+            index = ['Sigmar', 'sigmathetamax', 'sigmathetamin']
+            data = {'Tensions' : index, 'Circle 1' : tension, 'Circle 2' : tension2, 'Circle 3' : tension3, 'Circle 4' : tension4}
+            DataFrame = pd.DataFrame(data=data)
+            DataFrame.to_excel(f'output\\{self.name} - Zone {zone}.xlsx')
+            sigma1 = [max(tension) , max(tension2), max(tension3), max(tension4)]
+            sigma1 = pd.Series(sigma1)
+            sigma3 = [min(tension), min(tension2), min(tension3), min(tension4)]
+            sigma3 = pd.Series(sigma3)
+            MohrCircle(sigma1, sigma3, name=f'Circulo de Mohr zona {zone}', S0=self.wellDF['Coesao(psi)'][zone], phi=self.wellDF['angulo_atrito_interno'][zone]*np.pi/180)"""
+
+        for zone in zones:
+            Gw = self.wellDF['Collapse Gradient'][zone]
+            Pw = Gw * 0.1704 * self.wellDF['prof (m)'][zone]
+            sigmar = Pw - self.wellDF['Pore Pressure'][zone]
+            sigmathetamax = 3*self.wellDF['TH'][zone]-self.wellDF['Th'][zone] - Pw - self.wellDF['Pore Pressure'][zone]
+            sigmathetamin = 3*self.wellDF['Th'][zone]-self.wellDF['TH'][zone] - Pw - self.wellDF['Pore Pressure'][zone]
+            if sigmathetamax-sigmar > sigmathetamin - sigmar:
+                sigmatheta = sigmathetamax
+            else:
+                sigmatheta = sigmathetamin
+            tension = [sigmar, sigmatheta]
+
+            Gw2 = self.wellDF['Collapse Gradient'][zone] * 1.10
+            Pw2 = Gw2 * 0.1704 * self.wellDF['prof (m)'][zone]
+            sigmar2 = Pw2 - self.wellDF['Pore Pressure'][zone]
+            sigmathetamax2 = 3*self.wellDF['TH'][zone]-self.wellDF['Th'][zone] - Pw2 - self.wellDF['Pore Pressure'][zone]
+            sigmathetamin2 = 3*self.wellDF['Th'][zone]-self.wellDF['TH'][zone] - Pw2 - self.wellDF['Pore Pressure'][zone]
+
+            if sigmathetamax2-sigmar2 > sigmathetamin2 - sigmar2:
+                sigmatheta2 = sigmathetamax2
+            else:
+                sigmatheta2 = sigmathetamin2
+            tension2 = [sigmar2, sigmatheta2]
+
+            Gw3 = self.wellDF['Fracture Gradient'][zone] * 0.9
+            Pw3 = Gw3 * 0.1704 * self.wellDF['prof (m)'][zone]
+            sigmar3 = Pw3 - self.wellDF['Pore Pressure'][zone]
+            sigmathetamax3 = 3 * self.wellDF['TH'][zone] - self.wellDF['Th'][zone] - Pw3 - self.wellDF['Pore Pressure'][zone]
+            sigmathetamin3 = 3 * self.wellDF['Th'][zone] - self.wellDF['TH'][zone] - Pw3 - self.wellDF['Pore Pressure'][zone]
+
+            if sigmathetamax3-sigmar3 > sigmathetamin3 - sigmar3:
+                sigmatheta3 = sigmathetamax3
+            else:
+                sigmatheta3 = sigmathetamin3
+            tension3 = [sigmar3, sigmatheta3]
+
+            Gw4 = self.wellDF['Fracture Gradient'][zone]
+            Pw4 = Gw4 * 0.1704 * self.wellDF['prof (m)'][zone]
+            sigmar4 = Pw4 - self.wellDF['Pore Pressure'][zone]
+            sigmathetamax4 = 3 * self.wellDF['TH'][zone] - self.wellDF['Th'][zone] - Pw4 - self.wellDF['Pore Pressure'][zone]
+            sigmathetamin4 = 3 * self.wellDF['Th'][zone] - self.wellDF['TH'][zone] - Pw4 - self.wellDF['Pore Pressure'][zone]
+
+            if sigmathetamax4-sigmar4 > sigmathetamin4 - sigmar4:
+                sigmatheta4 = sigmathetamax4
+            else:
+                sigmatheta4 = sigmathetamin4
+            tension4 = [sigmar4, sigmatheta4]
+
             index = ['Sigmar', 'sigmathetamax', 'sigmathetamin']
             data = {'Tensions' : index, 'Circle 1' : tension, 'Circle 2' : tension2, 'Circle 3' : tension3, 'Circle 4' : tension4}
             DataFrame = pd.DataFrame(data=data)
@@ -1029,7 +1091,7 @@ class MohrCircle:
         ax.grid()
         ax.set_xlabel('Tensão [psi]')
         ax.set_ylabel('Cisalhamento [psi]')
-        ax.legend()
+
         if self.sigma1.max() > self.sigma3.max() and self.sigma3.min() > 0:
             ax.set_xlim(0, self.sigma1.max() * 1.1)
             x = np.linspace(0, self.sigma1.max())
@@ -1043,7 +1105,7 @@ class MohrCircle:
             ax.set_xlim(self.sigma3.min() *1.1, self.sigma3.max() * 1.1)
             x = np.linspace(self.sigma3.min(), self.sigma3.max())
         ax.set_ylim(-max(rd) * 1.1, max(rd) * 1.1)
-
+        ax.axis('equal')
         if self.S0 is not None and self.phi is not None:
             ax.plot(x, self.mohrcoulombcriteria(x, self.phi, self.S0), color='black',
                     label=f"Modelo: y = {float(np.tan(self.phi)):.4f}x + {float(self.S0):.4f}")
@@ -1053,6 +1115,7 @@ class MohrCircle:
         else:
             ax.set_title(self.name)
             fig.savefig(f'output\\{self.name}.jpg', format='jpg', dpi=800)
+        ax.legend()
         plt.show()
 
     def export(self):
