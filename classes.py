@@ -266,7 +266,7 @@ class linearmodel:
            ----------
            wellDF : dict or Any
                Dataframe containing well information
-           """
+    """
 
     def __init__(self, x, y):
         self.x = x
