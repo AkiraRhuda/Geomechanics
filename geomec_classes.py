@@ -1092,7 +1092,7 @@ class MohrCircle:
             x0 = radius + self.sigma3[i]
             y0 = 0
             circle = plt.Circle((x0, y0), radius, color=color[i], fill=False,
-                                label=f'Corpo de prova {i}: [{self.sigma1[i]:.3f}, {self.sigma3[i]:.3f}]')
+                                label=f'Corpo de prova {i}: σ₁={self.sigma1[i]:.3f}, σ₃ = {self.sigma3[i]:.3f}')
             ax.add_patch(circle)
             rd.append(abs(radius))
         ax.grid()
